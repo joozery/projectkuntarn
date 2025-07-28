@@ -12,14 +12,51 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    loadProducts();
+    if (selectedBranch) {
+      loadProducts();
+    } else {
+      setProducts([]);
+    }
   }, [selectedBranch]);
+
+  // Force refresh when component mounts
+  useEffect(() => {
+    if (selectedBranch) {
+      const timer = setTimeout(() => {
+        loadProducts();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const loadProducts = async () => {
     try {
       setLoading(true);
+      console.log('Loading products for branch:', selectedBranch);
+      
+      if (!selectedBranch) {
+        console.log('No selectedBranch, using empty array');
+        setProducts([]);
+        return;
+      }
+      
       const response = await productsService.getAll(selectedBranch);
-      const productsData = response.data || [];
+      console.log('Products API response:', response);
+      
+      // Handle different response formats
+      let productsData = [];
+      if (response.data && response.data.success && Array.isArray(response.data.data)) {
+        // Format: { success: true, data: [...] }
+        productsData = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        // Format: direct array
+        productsData = response.data;
+      } else if (response.data && Array.isArray(response.data)) {
+        // Fallback
+        productsData = response.data;
+      }
+      
+      console.log('Processed products data:', productsData);
       setProducts(productsData);
     } catch (error) {
       console.error('Error loading products:', error);
@@ -28,6 +65,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
         description: "ไม่สามารถโหลดข้อมูลสินค้าได้",
         variant: "destructive"
       });
+      setProducts([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
@@ -36,15 +74,52 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
   const addProduct = async (productData) => {
     try {
       setSubmitting(true);
+      
+      // Validate product data
+      if (!productData.name || !productData.price) {
+        toast({
+          title: "ข้อมูลไม่ครบถ้วน",
+          description: "กรุณากรอกชื่อสินค้าและราคา",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       const newProduct = {
         ...productData,
-        branchId: selectedBranch
+        branchId: selectedBranch,
+        price: parseFloat(productData.price) || 0
       };
       
-      const response = await productsService.create(newProduct);
-      const createdProduct = response.data;
+      console.log('Creating product with data:', newProduct);
       
-      setProducts(prev => [createdProduct, ...prev]);
+      const response = await productsService.create(newProduct);
+      console.log('Product creation response:', response);
+      
+      let createdProduct;
+      if (response.data && response.data.success && response.data.data) {
+        createdProduct = response.data.data;
+      } else if (response.data) {
+        createdProduct = response.data;
+      } else {
+        createdProduct = response;
+      }
+      
+      // Ensure createdProduct has required fields
+      const validatedProduct = {
+        id: createdProduct.id,
+        name: createdProduct.name || productData.name,
+        description: createdProduct.description || productData.description || '',
+        price: parseFloat(createdProduct.price) || parseFloat(productData.price) || 0,
+        category: createdProduct.category || productData.category || '',
+        branchId: createdProduct.branchId || selectedBranch,
+        branchName: createdProduct.branchName || currentBranch?.name || '',
+        status: createdProduct.status || 'active'
+      };
+      
+      console.log('Validated product to add:', validatedProduct);
+      
+      setProducts(prev => [validatedProduct, ...prev]);
       
       toast({
         title: "สำเร็จ",
@@ -122,7 +197,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <Package className="w-4 h-4" />
-          <span>สินค้าทั้งหมด: {products.length} รายการ</span>
+          <span>สินค้าทั้งหมด: {Array.isArray(products) ? products.length : 0} รายการ</span>
         </div>
       </div>
 
@@ -149,7 +224,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
             </div>
             
             <div className="p-6">
-              {products.length === 0 ? (
+              {!Array.isArray(products) || products.length === 0 ? (
                 <div className="text-center py-12">
                   <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">ยังไม่มีสินค้า</h3>
@@ -161,45 +236,53 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                 </div>
               ) : (
                 <div className="grid gap-4">
-                  {products.map((product, index) => (
-                    <motion.div
-                      key={product.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="text-lg font-semibold text-gray-900">{product.name}</h3>
-                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                              {product.branchName}
-                            </span>
+                  {Array.isArray(products) && products.map((product, index) => {
+                    // Validate product data before rendering
+                    if (!product || !product.id) {
+                      console.warn('Invalid product data:', product);
+                      return null;
+                    }
+                    
+                    return (
+                      <motion.div
+                        key={product.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="text-lg font-semibold text-gray-900">{product.name || 'ไม่มีชื่อ'}</h3>
+                              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                                {product.branchName || 'ไม่ระบุสาขา'}
+                              </span>
+                            </div>
+                            <p className="text-gray-600 mb-3">{product.description || 'ไม่มีคำอธิบาย'}</p>
+                            <div className="flex items-center gap-4 text-sm">
+                              <span className="flex items-center gap-1 text-green-600 font-medium">
+                                <DollarSign className="w-4 h-4" />
+                                ฿{(product.price || 0).toLocaleString()}
+                              </span>
+                              <span className="flex items-center gap-1 text-gray-500">
+                                <Package className="w-4 h-4" />
+                                หมวด: {product.category || 'ไม่ระบุ'}
+                              </span>
+                            </div>
                           </div>
-                          <p className="text-gray-600 mb-3">{product.description}</p>
-                          <div className="flex items-center gap-4 text-sm">
-                            <span className="flex items-center gap-1 text-green-600 font-medium">
-                              <DollarSign className="w-4 h-4" />
-                              ฿{product.price.toLocaleString()}
-                            </span>
-                            <span className="flex items-center gap-1 text-gray-500">
-                              <Package className="w-4 h-4" />
-                              หมวด: {product.category || 'ไม่ระบุ'}
-                            </span>
-                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => deleteProduct(product.id)}
+                            className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => deleteProduct(product.id)}
-                          className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </motion.div>
-                  ))}
+                      </motion.div>
+                    );
+                  })}
                 </div>
               )}
             </div>

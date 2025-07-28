@@ -6,10 +6,15 @@ import { Calculator, TrendingUp } from 'lucide-react';
 import CustomerSelector from '@/components/forms/CustomerSelector';
 import ProductSelector from '@/components/forms/ProductSelector';
 import EmployeeSelector from '@/components/forms/EmployeeSelector';
-import GuarantorForm from '@/components/forms/GuarantorForm';
 import InstallmentDetails from '@/components/forms/InstallmentDetails';
 
 const InstallmentPlan = ({ products = [], customers = [], employees = [], onAddPlanAndContract, existingPlans = [] }) => {
+  console.log('InstallmentPlan props:', { 
+    customersCount: customers?.length || 0, 
+    productsCount: products?.length || 0, 
+    employeesCount: employees?.length || 0,
+    customers: customers
+  });
   const [selectedProduct, setSelectedProduct] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState('');
@@ -17,7 +22,6 @@ const InstallmentPlan = ({ products = [], customers = [], employees = [], onAddP
   const [months, setMonths] = useState(24);
   const [interestRate, setInterestRate] = useState(1.25);
   const [downPayment, setDownPayment] = useState(0);
-  const [guarantor, setGuarantor] = useState({ name: '', nickname: '', phone: '', address: '' });
 
   const selectedProductData = products.find(p => p.id === selectedProduct);
   const selectedCustomerData = customers.find(c => c.id === selectedCustomer);
@@ -96,7 +100,6 @@ const InstallmentPlan = ({ products = [], customers = [], employees = [], onAddP
     const contract = {
       contractNumber: `F${Math.floor(1000 + Math.random() * 9000)}`,
       customer: selectedCustomerData,
-      guarantor: guarantor,
       product: selectedProductData,
       plan: plan,
       salesperson: selectedEmployeeData,
@@ -113,7 +116,6 @@ const InstallmentPlan = ({ products = [], customers = [], employees = [], onAddP
     setMonths(24);
     setInterestRate(1.25);
     setDownPayment(0);
-    setGuarantor({ name: '', nickname: '', phone: '', address: '' });
   };
 
   return (
@@ -148,11 +150,6 @@ const InstallmentPlan = ({ products = [], customers = [], employees = [], onAddP
               onEmployeeChange={setSelectedEmployee}
             />
           </div>
-
-          <GuarantorForm
-            guarantor={guarantor}
-            onGuarantorChange={setGuarantor}
-          />
 
           <InstallmentDetails
             contractDate={contractDate}

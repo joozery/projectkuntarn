@@ -24,11 +24,45 @@ const EmployeesPage = ({ selectedBranch, currentBranch }) => {
     loadEmployees();
   }, [selectedBranch]);
 
+  // Force refresh when component mounts
+  useEffect(() => {
+    if (selectedBranch) {
+      const timer = setTimeout(() => {
+        loadEmployees();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
   const loadEmployees = async () => {
     try {
       setLoading(true);
+      
+      if (!selectedBranch) {
+        console.log('No selectedBranch, setting empty array');
+        setEmployees([]);
+        return;
+      }
+      
       const response = await employeesService.getAll(selectedBranch);
-      const employeesData = response.data || [];
+      
+      console.log('API Response:', response);
+      console.log('Response data:', response.data);
+      
+      // Handle different response formats
+      let employeesData = [];
+      if (response && response.data) {
+        if (response.data.success && Array.isArray(response.data.data)) {
+          employeesData = response.data.data;
+        } else if (Array.isArray(response.data)) {
+          employeesData = response.data;
+        } else {
+          console.warn('Invalid response format:', response);
+          employeesData = [];
+        }
+      }
+      
+      console.log('Employees data:', employeesData);
       setEmployees(employeesData);
     } catch (error) {
       console.error('Error loading employees:', error);
@@ -163,7 +197,7 @@ const EmployeesPage = ({ selectedBranch, currentBranch }) => {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <UserCheck className="w-4 h-4" />
-            <span>พนักงานทั้งหมด: {employees.length} คน</span>
+            <span>พนักงานทั้งหมด: {Array.isArray(employees) ? employees.length : 0} คน</span>
           </div>
           <Button 
             onClick={() => setShowForm(!showForm)}
@@ -300,7 +334,7 @@ const EmployeesPage = ({ selectedBranch, currentBranch }) => {
         </div>
         
         <div className="p-6">
-          {employees.length === 0 ? (
+          {!Array.isArray(employees) || employees.length === 0 ? (
             <div className="text-center py-12">
               <UserCheck className="w-16 h-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">ยังไม่มีพนักงาน</h3>
@@ -315,7 +349,7 @@ const EmployeesPage = ({ selectedBranch, currentBranch }) => {
             </div>
           ) : (
             <div className="grid gap-4">
-              {employees.map((employee, index) => (
+              {Array.isArray(employees) && employees.map((employee, index) => (
                 <motion.div
                   key={employee.id}
                   initial={{ opacity: 0, y: 20 }}

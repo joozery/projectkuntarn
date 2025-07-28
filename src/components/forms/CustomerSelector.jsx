@@ -6,6 +6,12 @@ const CustomerSelector = ({
   selectedCustomerId, 
   onCustomerChange 
 }) => {
+  console.log('CustomerSelector props:', { 
+    customersCount: customers?.length || 0, 
+    customers: customers,
+    selectedCustomerId 
+  });
+  
   const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
 
   return (

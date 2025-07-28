@@ -3,11 +3,24 @@ import api from '@/lib/api';
 // Checkers API Service
 export const checkersService = {
   // Get all checkers
-  getAll: async (params = {}) => {
+  getAll: async (branchId, params = {}) => {
     try {
-      const response = await api.get('/checkers', { params });
-      return response.data;
+      console.log('🔍 checkersService.getAll called with branchId:', branchId, 'params:', params);
+      
+      // Create params object with branchId
+      const queryParams = { branchId, ...params };
+      
+      // Add cache busting
+      queryParams._t = new Date().getTime();
+      console.log('🔄 Making API call to /checkers with params:', queryParams);
+      
+      const response = await api.get('/checkers', { params: queryParams });
+      console.log('✅ checkersService.getAll response:', response);
+      
+      return response;
     } catch (error) {
+      console.error('❌ checkersService.getAll error:', error);
+      console.error('❌ Error response:', error.response);
       throw error;
     }
   },

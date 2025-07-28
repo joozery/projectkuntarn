@@ -5,12 +5,13 @@ import {
   ClipboardList,
   Printer,
   Eye,
+  Edit,
   CheckCircle,
   Clock,
   AlertCircle
 } from 'lucide-react';
 
-const ContractsTable = ({ contracts, onPrint, onView }) => {
+const ContractsTable = ({ contracts, onPrint, onView, onEdit }) => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'active': return 'bg-green-100 text-green-800';
@@ -95,7 +96,10 @@ const ContractsTable = ({ contracts, onPrint, onView }) => {
                 <div className="text-xs text-gray-500">{contract.months} งวด</div>
               </td>
               <td className="py-3 px-4">
-                <div className="text-gray-900">{contract.employeeName}</div>
+                <div className="text-gray-900">
+                  <div className="font-medium">{contract.employeeName || contract.salespersonFullName || 'ไม่ระบุ'}</div>
+                  <div className="text-xs text-gray-500">ผู้ตรวจสอบ: {contract.inspectorName || contract.inspectorFullName || 'ไม่ระบุ'}</div>
+                </div>
               </td>
               <td className="py-3 px-4">
                 <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(contract.status)}`}>
@@ -121,6 +125,15 @@ const ContractsTable = ({ contracts, onPrint, onView }) => {
                   >
                     <Eye className="w-3 h-3 mr-1" />
                     ดู
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onEdit(contract)}
+                    className="text-orange-600 border-orange-200 hover:bg-orange-50 text-xs px-2 py-1"
+                  >
+                    <Edit className="w-3 h-3 mr-1" />
+                    แก้ไข
                   </Button>
                 </div>
               </td>

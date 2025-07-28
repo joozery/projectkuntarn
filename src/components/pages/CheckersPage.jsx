@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { checkersService } from '@/services/checkersService';
 import CheckerInstallmentReport from './CheckerInstallmentReport';
+import CheckerCustomersPage from './CheckerCustomersPage';
 
 const CheckersPage = ({ selectedBranch, currentBranch }) => {
   const [checkers, setCheckers] = useState([]);
@@ -27,11 +28,23 @@ const CheckersPage = ({ selectedBranch, currentBranch }) => {
   const [submitting, setSubmitting] = useState(false);
   const [selectedChecker, setSelectedChecker] = useState(null);
   const [showReport, setShowReport] = useState(false);
+  const [showCustomers, setShowCustomers] = useState(false);
 
   // Load checkers from API
   useEffect(() => {
-    loadCheckers();
+    if (selectedBranch) {
+      loadCheckers();
+    }
   }, [selectedBranch]);
+
+  // Force refresh on component mount
+  useEffect(() => {
+    if (selectedBranch) {
+      setTimeout(() => {
+        loadCheckers();
+      }, 100);
+    }
+  }, []);
 
   const loadCheckers = async () => {
     try {
@@ -41,8 +54,21 @@ const CheckersPage = ({ selectedBranch, currentBranch }) => {
         params.search = searchTerm;
       }
       
-      const response = await checkersService.getAll(params);
-      setCheckers(response.data || []);
+      const response = await checkersService.getAll(selectedBranch, params);
+      
+      // Handle different response formats
+      let checkersData = [];
+      if (response.data?.success && Array.isArray(response.data.data)) {
+        checkersData = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        checkersData = response.data;
+      } else if (response.data && Array.isArray(response.data)) {
+        checkersData = response.data;
+      }
+      
+      console.log('Checkers API response:', response);
+      console.log('Processed checkers data:', checkersData);
+      setCheckers(checkersData);
     } catch (error) {
       console.error('Error loading checkers:', error);
       toast({
@@ -139,10 +165,20 @@ const CheckersPage = ({ selectedBranch, currentBranch }) => {
     setShowReport(false);
   };
 
-  const filteredCheckers = checkers.filter(checker => {
+  const openCustomersPage = (checker) => {
+    setSelectedChecker(checker);
+    setShowCustomers(true);
+  };
+
+  const closeCustomersPage = () => {
+    setSelectedChecker(null);
+    setShowCustomers(false);
+  };
+
+  const filteredCheckers = Array.isArray(checkers) ? checkers.filter(checker => {
     const matchesSearch = checker.fullName.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
-  });
+  }) : [];
 
   return (
     <div className="space-y-6">
@@ -152,6 +188,13 @@ const CheckersPage = ({ selectedBranch, currentBranch }) => {
           currentBranch={currentBranch}
           checker={selectedChecker}
           onBack={closeInstallmentReport}
+        />
+      ) : showCustomers && selectedChecker ? (
+        <CheckerCustomersPage
+          selectedBranch={selectedBranch}
+          currentBranch={currentBranch}
+          checker={selectedChecker}
+          onBack={closeCustomersPage}
         />
       ) : (
         <>
@@ -281,12 +324,7 @@ const CheckersPage = ({ selectedBranch, currentBranch }) => {
                             <Button
                               size="sm"
                               className="bg-blue-600 hover:bg-blue-700 text-white"
-                              onClick={() => {
-                                toast({
-                                  title: "ข้อมูลลูกค้า",
-                                  description: `แสดงข้อมูลลูกค้าของ ${checker.fullName}`,
-                                });
-                              }}
+                              onClick={() => openCustomersPage(checker)}
                             >
                               <Users className="w-3 h-3 mr-1" />
                               ลูกค้า

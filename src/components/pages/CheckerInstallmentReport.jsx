@@ -31,13 +31,18 @@ const CheckerInstallmentReport = ({ selectedBranch, currentBranch, checker, onBa
       cardsCollected: 0,
       pGreen: 0,
       pRed: 0,
+      pBlue: 0,
       totalPCards: 0,
       pGreenCollected: 0,
       pRedCollected: 0,
       totalPCardsCollected: 0,
       totalMoney: 0,
       moneyToCollect: 0,
-      moneyCollected: 0
+      moneyCollected: 0,
+      pBlack: 0,
+      napheo: 0,
+      napheoBlue: 0,
+      napheoBlack: 0
     },
     entries: [] // ไม่มีข้อมูลตามรูป
   };
@@ -244,7 +249,7 @@ const CheckerInstallmentReport = ({ selectedBranch, currentBranch, checker, onBa
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                   <div className="flex items-center gap-2">
-                    นับเพียว
+                    <span className="text-black font-bold">นับเพียว</span>
                     <div className="flex flex-col">
                       <ChevronUp className="w-3 h-3 text-gray-400" />
                       <ChevronDown className="w-3 h-3 text-gray-400" />
@@ -253,7 +258,7 @@ const CheckerInstallmentReport = ({ selectedBranch, currentBranch, checker, onBa
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                   <div className="flex items-center gap-2">
-                    P
+                    <span className="text-blue-600 font-bold">นับเพียวน้ำเงิน</span>
                     <div className="flex flex-col">
                       <ChevronUp className="w-3 h-3 text-gray-400" />
                       <ChevronDown className="w-3 h-3 text-gray-400" />
@@ -262,7 +267,7 @@ const CheckerInstallmentReport = ({ selectedBranch, currentBranch, checker, onBa
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                   <div className="flex items-center gap-2">
-                    P
+                    <span className="text-black font-bold">นับเพียวดำ</span>
                     <div className="flex flex-col">
                       <ChevronUp className="w-3 h-3 text-gray-400" />
                       <ChevronDown className="w-3 h-3 text-gray-400" />
@@ -271,7 +276,25 @@ const CheckerInstallmentReport = ({ selectedBranch, currentBranch, checker, onBa
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                   <div className="flex items-center gap-2">
-                    P
+                    <span className="text-black font-bold">P</span>
+                    <div className="flex flex-col">
+                      <ChevronUp className="w-3 h-3 text-gray-400" />
+                      <ChevronDown className="w-3 h-3 text-gray-400" />
+                    </div>
+                  </div>
+                </th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    <span className="text-red-600 font-bold">P</span>
+                    <div className="flex flex-col">
+                      <ChevronUp className="w-3 h-3 text-gray-400" />
+                      <ChevronDown className="w-3 h-3 text-gray-400" />
+                    </div>
+                  </div>
+                </th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    <span className="text-blue-600 font-bold">P</span>
                     <div className="flex flex-col">
                       <ChevronUp className="w-3 h-3 text-gray-400" />
                       <ChevronDown className="w-3 h-3 text-gray-400" />
@@ -328,7 +351,7 @@ const CheckerInstallmentReport = ({ selectedBranch, currentBranch, checker, onBa
             <tbody className="bg-white divide-y divide-gray-200">
               {/* No search results found */}
               <tr>
-                <td colSpan="12" className="px-6 py-12 text-center">
+                <td colSpan="15" className="px-6 py-12 text-center">
                   <div className="text-gray-500">
                     <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                     <p>1 No search results found</p>
@@ -338,7 +361,7 @@ const CheckerInstallmentReport = ({ selectedBranch, currentBranch, checker, onBa
               
               {/* Summary row with zeros */}
               <tr className="bg-gray-50">
-                <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 bg-gray-50 sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 bg-gray-50 sticky left-0 z-10 group-hover:bg-gray-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                   -
                 </td>
                 <td className="px-3 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">
@@ -350,10 +373,19 @@ const CheckerInstallmentReport = ({ selectedBranch, currentBranch, checker, onBa
                 <td className="px-3 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">
                   0
                 </td>
-                <td className="px-3 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">
+                <td className="px-3 py-4 whitespace-nowrap text-sm text-black font-medium">
                   0
                 </td>
                 <td className="px-3 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">
+                  0
+                </td>
+                <td className="px-3 py-4 whitespace-nowrap text-sm text-black font-medium">
+                  0
+                </td>
+                <td className="px-3 py-4 whitespace-nowrap text-sm text-black font-medium">
+                  0
+                </td>
+                <td className="px-3 py-4 whitespace-nowrap text-sm text-red-600 font-medium">
                   0
                 </td>
                 <td className="px-3 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">
@@ -465,12 +497,16 @@ const CheckerInstallmentReport = ({ selectedBranch, currentBranch, checker, onBa
             <h4 className="font-medium text-gray-700">P Counts</h4>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">P เขียว:</span>
-                <span className="text-sm font-medium">{mockData.summary.pGreen} ใบ</span>
+                <span className="text-sm text-gray-600">P ดำ:</span>
+                <span className="text-sm font-medium text-black">{mockData.summary.pBlack || 0} ใบ</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">P แดง:</span>
-                <span className="text-sm font-medium">{mockData.summary.pRed} ใบ</span>
+                <span className="text-sm font-medium text-red-600">{mockData.summary.pRed} ใบ</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">P น้ำเงิน:</span>
+                <span className="text-sm font-medium text-blue-600">{mockData.summary.pBlue || 0} ใบ</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">รวมการ์ดทั้งหมด:</span>
@@ -479,21 +515,25 @@ const CheckerInstallmentReport = ({ selectedBranch, currentBranch, checker, onBa
             </div>
           </div>
 
-          {/* P Collected Counts */}
+          {/* นับเพียว Counts */}
           <div className="space-y-3">
-            <h4 className="font-medium text-gray-700">P Collected</h4>
+            <h4 className="font-medium text-gray-700">นับเพียว</h4>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">P เขียว เก็บได้:</span>
-                <span className="text-sm font-medium">{mockData.summary.pGreenCollected} ใบ</span>
+                <span className="text-sm text-gray-600">นับเพียว:</span>
+                <span className="text-sm font-medium text-black">{mockData.summary.napheo || 0} ใบ</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">P แดง เก็บได้:</span>
-                <span className="text-sm font-medium">{mockData.summary.pRedCollected} ใบ</span>
+                <span className="text-sm text-gray-600">นับเพียวน้ำเงิน:</span>
+                <span className="text-sm font-medium text-blue-600">{mockData.summary.napheoBlue || 0} ใบ</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">รวมการ์ดเก็บได้:</span>
-                <span className="text-sm font-medium">{mockData.summary.totalPCardsCollected} ใบ</span>
+                <span className="text-sm text-gray-600">นับเพียวดำ:</span>
+                <span className="text-sm font-medium text-black">{mockData.summary.napheoBlack || 0} ใบ</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">รวมนับเพียว:</span>
+                <span className="text-sm font-medium">{(mockData.summary.napheo || 0) + (mockData.summary.napheoBlue || 0) + (mockData.summary.napheoBlack || 0)} ใบ</span>
               </div>
             </div>
           </div>

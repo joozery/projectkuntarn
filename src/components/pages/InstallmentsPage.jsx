@@ -16,12 +16,39 @@ const InstallmentsPage = ({ selectedBranch, currentBranch }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
+    if (selectedBranch) {
+      loadData();
+    } else {
+      setCustomers([]);
+      setProducts([]);
+      setEmployees([]);
+      setContracts([]);
+    }
   }, [selectedBranch]);
+
+  // Force refresh when component mounts
+  useEffect(() => {
+    if (selectedBranch) {
+      const timer = setTimeout(() => {
+        loadData();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const loadData = async () => {
     try {
       setLoading(true);
+      console.log('Loading data for branch:', selectedBranch);
+      
+      if (!selectedBranch) {
+        console.log('No selectedBranch, using empty arrays');
+        setCustomers([]);
+        setProducts([]);
+        setEmployees([]);
+        setContracts([]);
+        return;
+      }
       
       // Load all data in parallel
       const [customersRes, productsRes, employeesRes, contractsRes] = await Promise.all([
@@ -31,10 +58,25 @@ const InstallmentsPage = ({ selectedBranch, currentBranch }) => {
         contractsService.getAll(selectedBranch)
       ]);
 
-      setCustomers(customersRes.data || []);
-      setProducts(productsRes.data || []);
-      setEmployees(employeesRes.data || []);
-      setContracts(contractsRes.data || []);
+      console.log('API responses:', { customersRes, productsRes, employeesRes, contractsRes });
+
+      // Handle different response formats
+      const customersData = customersRes.data?.success ? customersRes.data.data : (customersRes.data || []);
+      const productsData = productsRes.data?.success ? productsRes.data.data : (productsRes.data || []);
+      const employeesData = employeesRes.data?.success ? employeesRes.data.data : (employeesRes.data || []);
+      const contractsData = contractsRes.data?.success ? contractsRes.data.data : (contractsRes.data || []);
+
+      console.log('Processed data:', { 
+        customers: customersData.length, 
+        products: productsData.length, 
+        employees: employeesData.length,
+        contracts: contractsData.length 
+      });
+
+      setCustomers(customersData);
+      setProducts(productsData);
+      setEmployees(employeesData);
+      setContracts(contractsData);
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -42,6 +84,11 @@ const InstallmentsPage = ({ selectedBranch, currentBranch }) => {
         description: "ไม่สามารถโหลดข้อมูลได้",
         variant: "destructive"
       });
+      // Set empty arrays on error
+      setCustomers([]);
+      setProducts([]);
+      setEmployees([]);
+      setContracts([]);
     } finally {
       setLoading(false);
     }

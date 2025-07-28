@@ -4,6 +4,7 @@ export const productsService = {
   // Get all products
   getAll: async (branchId) => {
     const params = branchId ? { branchId } : {};
+    params._t = new Date().getTime(); // Cache busting
     return api.get('/products', { params });
   },
 
