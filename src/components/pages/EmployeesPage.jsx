@@ -68,7 +68,7 @@ const EmployeesPage = ({ selectedBranch, currentBranch }) => {
       console.error('Error loading employees:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
-        description: "ไม่สามารถโหลดข้อมูลพนักงานได้",
+        description: "ไม่สามารถโหลดข้อมูลพนักงานขายได้",
         variant: "destructive"
       });
     } finally {
@@ -173,14 +173,14 @@ const EmployeesPage = ({ selectedBranch, currentBranch }) => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">จัดการพนักงาน</h1>
+            <h1 className="text-2xl font-bold text-gray-900">จัดการพนักงานขาย</h1>
             <p className="text-gray-600">กำลังโหลดข้อมูล...</p>
           </div>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-            <span className="ml-2 text-gray-500">กำลังโหลดข้อมูลพนักงาน...</span>
+            <span className="ml-2 text-gray-500">กำลังโหลดข้อมูลพนักงานขาย...</span>
           </div>
         </div>
       </div>
@@ -191,20 +191,20 @@ const EmployeesPage = ({ selectedBranch, currentBranch }) => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">จัดการพนักงาน</h1>
-          <p className="text-gray-600">เพิ่มพนักงานและติดตามการเข้างาน - {currentBranch?.name}</p>
+          <h1 className="text-2xl font-bold text-gray-900">จัดการพนักงานขาย</h1>
+          <p className="text-gray-600">เพิ่มพนักงานขายและติดตามการเข้างาน - {currentBranch?.name}</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <UserCheck className="w-4 h-4" />
-            <span>พนักงานทั้งหมด: {Array.isArray(employees) ? employees.length : 0} คน</span>
+            <span>พนักงานขายทั้งหมด: {Array.isArray(employees) ? employees.length : 0} คน</span>
           </div>
           <Button 
             onClick={() => setShowForm(!showForm)}
             className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
           >
             <Plus className="w-4 h-4 mr-2" />
-            เพิ่มพนักงาน
+            เพิ่มพนักงานขาย
           </Button>
         </div>
       </div>
@@ -217,7 +217,7 @@ const EmployeesPage = ({ selectedBranch, currentBranch }) => {
         >
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">
-              {editingEmployee ? 'แก้ไขพนักงาน' : 'เพิ่มพนักงานใหม่'}
+              {editingEmployee ? 'แก้ไขพนักงานขาย' : 'เพิ่มพนักงานขายใหม่'}
             </h2>
             <Button variant="outline" size="sm" onClick={resetForm}>
               ยกเลิก
@@ -226,7 +226,7 @@ const EmployeesPage = ({ selectedBranch, currentBranch }) => {
           <div className="mb-4 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
             <div className="flex items-center gap-2 text-sm text-emerald-700">
               <Building2 className="w-4 h-4" />
-              <span>พนักงานจะถูกเพิ่มในสาขา: <strong>{currentBranch?.name}</strong></span>
+              <span>พนักงานขายจะถูกเพิ่มในสาขา: <strong>{currentBranch?.name}</strong></span>
             </div>
           </div>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">

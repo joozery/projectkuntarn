@@ -78,7 +78,10 @@ const SearchableSelectField = ({ label, value, onChange, options, placeholder, r
       option.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       option.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       option.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      option.code?.toLowerCase().includes(searchTerm.toLowerCase())
+      option.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      option.nickname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      option.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      option.surname?.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredOptions(filtered);
   }, [searchTerm, options]);
@@ -91,7 +94,7 @@ const SearchableSelectField = ({ label, value, onChange, options, placeholder, r
       <div className="relative">
         <input
           type="text"
-          value={isOpen ? searchTerm : (selectedOption?.name || selectedOption?.full_name || selectedOption?.fullName || '')}
+          value={isOpen ? searchTerm : (selectedOption?.name || selectedOption?.full_name || selectedOption?.fullName || selectedOption?.nickname || '')}
           onChange={(e) => {
             if (isOpen) {
               setSearchTerm(e.target.value);
@@ -116,7 +119,8 @@ const SearchableSelectField = ({ label, value, onChange, options, placeholder, r
                 setSearchTerm('');
               }}
             >
-              {option.name || option.full_name || option.fullName}
+              {option.name || option.full_name || option.fullName || option.nickname}
+              {option.phone && <span className="text-gray-500 ml-2">({option.phone})</span>}
             </div>
           ))}
         </div>
@@ -160,6 +164,8 @@ const ContractEditForm = ({
   const [loadingEmployees, setLoadingEmployees] = useState(false);
   const [allCheckers, setAllCheckers] = useState([]);
   const [loadingCheckers, setLoadingCheckers] = useState(false);
+  const [allCollectors, setAllCollectors] = useState([]);
+  const [loadingCollectors, setLoadingCollectors] = useState(false);
   const [loadingContract, setLoadingContract] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -217,6 +223,7 @@ const ContractEditForm = ({
     },
     salespersonId: '',
     inspectorId: '',
+    collectorId: '',
     line: '',
     totalAmount: 0,
     installmentPeriod: 12,
@@ -329,6 +336,7 @@ const ContractEditForm = ({
             },
             salespersonId: contract.salespersonId || '',
             inspectorId: contract.inspectorId || '',
+            collectorId: contract.collectorId || '', // Will be mapped from line if needed
             line: contract.line || '',
             totalAmount: contract.totalAmount || 0,
             installmentPeriod: contract.installmentPeriod || contract.months || 12,
@@ -492,6 +500,66 @@ const ContractEditForm = ({
     loadCheckers();
   }, [selectedBranch]);
 
+  // Load collectors from API
+  useEffect(() => {
+    const loadCollectors = async () => {
+      if (!selectedBranch) return;
+      
+      try {
+        setLoadingCollectors(true);
+        console.log('🔍 Loading collectors for branch:', selectedBranch);
+        
+        // Use employeesService and filter for collectors (same as ContractForm)
+        const response = await employeesService.getAll(selectedBranch);
+        
+        console.log('🔍 Collectors response:', response);
+        
+        let employeesData = [];
+        if (response.data?.success && Array.isArray(response.data.data)) {
+          employeesData = response.data.data;
+        } else if (Array.isArray(response.data)) {
+          employeesData = response.data;
+        }
+        
+        // Filter for collectors
+        const collectorsData = employeesData.filter(emp => 
+          emp.position === 'collector' || emp.position === 'พนักงานเก็บเงิน'
+        );
+        
+        console.log('🔍 Processed collectors data:', collectorsData);
+        setAllCollectors(collectorsData);
+      } catch (error) {
+        console.error('Error loading collectors:', error);
+        console.warn('⚠️ Collectors loading failed, continuing without collectors data');
+        setAllCollectors([]);
+      } finally {
+        setLoadingCollectors(false);
+      }
+    };
+
+    loadCollectors();
+  }, [selectedBranch]);
+
+  // Map collectorId from line when collectors data is loaded
+  useEffect(() => {
+    if (allCollectors.length > 0 && contractForm.line && !contractForm.collectorId) {
+      // Try to find collector by line (code or name)
+      const foundCollector = allCollectors.find(collector => 
+        collector.code === contractForm.line || 
+        collector.name === contractForm.line ||
+        collector.full_name === contractForm.line
+      );
+      
+      if (foundCollector) {
+        console.log('🔍 Mapping collectorId from line:', contractForm.line, 'to collectorId:', foundCollector.id);
+        setContractForm(prev => ({
+          ...prev,
+          collectorId: foundCollector.id
+        }));
+      }
+    }
+  }, [allCollectors, contractForm.line, contractForm.collectorId]);
+
   const handleDetailChange = (section, field, value) => {
     setContractForm(prev => ({
       ...prev,
@@ -513,10 +581,10 @@ const ContractEditForm = ({
     e.preventDefault();
     console.log('🔍 ContractEditForm handleSubmit - contractForm:', contractForm);
     
-    if (!contractForm.customerId || !contractForm.productId || !contractForm.salespersonId || !contractForm.inspectorId) {
+    if (!contractForm.customerId || !contractForm.productId || !contractForm.salespersonId || !contractForm.inspectorId || !contractForm.collectorId) {
       toast({
         title: "กรุณากรอกข้อมูลให้ครบถ้วน",
-        description: "ลูกค้า, สินค้า, พนักงานขาย และผู้ตรวจสอบเป็นข้อมูลที่จำเป็น",
+        description: "ลูกค้า, สินค้า, พนักงานขาย, ผู้ตรวจสอบ และพนักงานเก็บเงินเป็นข้อมูลที่จำเป็น",
         variant: "destructive"
       });
       return;
@@ -524,10 +592,12 @@ const ContractEditForm = ({
 
     // Prepare data for API
     const selectedProduct = allProducts.find(p => p.id === contractForm.productId);
+    const selectedCollector = allCollectors.find(c => c.id === contractForm.collectorId);
     
     const contractData = {
       ...contractForm,
       productName: selectedProduct?.name || contractForm.productDetails.name,
+      line: selectedCollector?.code || selectedCollector?.name || contractForm.line || '',
       totalAmount: parseFloat(contractForm.productDetails.price) || contractForm.totalAmount,
       installmentPeriod: parseInt(contractForm.plan.months) || contractForm.installmentPeriod,
       startDate: contractForm.contractDate,
@@ -609,26 +679,6 @@ const ContractEditForm = ({
       </div>
       
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Debug Info - Remove in production */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-            <h4 className="text-sm font-medium text-yellow-800 mb-2">Debug Info:</h4>
-            <div className="text-xs text-yellow-700 space-y-1">
-              <div>Contract ID: {contractId}</div>
-              <div>Contract Number: {contractForm.contractNumber}</div>
-              <div>Customer Name: {contractForm.customerDetails.name}</div>
-              <div>Product Name: {contractForm.productDetails.name}</div>
-              <div>Total Amount: {contractForm.totalAmount}</div>
-              <div>Branch ID: {selectedBranch}</div>
-              <div>Loading States:</div>
-              <div>  - Contract: {loadingContract ? 'Loading...' : 'Loaded'}</div>
-              <div>  - Customers: {loadingCustomers ? 'Loading...' : `Loaded (${allCustomers.length})`}</div>
-              <div>  - Products: {loadingProducts ? 'Loading...' : `Loaded (${allProducts.length})`}</div>
-              <div>  - Employees: {loadingEmployees ? 'Loading...' : `Loaded (${allEmployees.length})`}</div>
-              <div>  - Checkers: {loadingCheckers ? 'Loading...' : `Loaded (${allCheckers.length})`}</div>
-            </div>
-          </div>
-        )}
 
         {/* Customer Section */}
         <FormSection title="รายละเอียดลูกค้า" icon={User}>
@@ -743,16 +793,13 @@ const ContractEditForm = ({
               placeholder={loadingCheckers ? "กำลังโหลดข้อมูล..." : "--เลือกผู้ตรวจสอบ--"} 
               required
             />
-            <SelectField 
+            <SearchableSelectField 
               label="สาย" 
-              value={contractForm.line} 
-              onChange={(e) => handleSelectChange('line', e.target.value)} 
-              options={[
-                { id: '1', name: 'สาย 1 รณไชยธรรม' },
-                { id: '2', name: 'สาย 2 เริงศักดิ์' },
-                { id: '3', name: 'สาย 3 อุดมศักดิ์' }
-              ]} 
-              placeholder="--เลือกสาย--"
+              value={contractForm.collectorId} 
+              onChange={(e) => handleSelectChange('collectorId', e.target.value)} 
+              options={allCollectors} 
+              placeholder={loadingCollectors ? "กำลังโหลดข้อมูล..." : "--เลือกสาย--"} 
+              required
             />
           </div>
         </FormSection>

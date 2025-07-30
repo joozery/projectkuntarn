@@ -17,49 +17,58 @@ import {
   Phone,
   MapPin,
   User,
-  Shield
+  Shield,
+  FileText
 } from 'lucide-react';
+import api from '@/lib/api';
 
 const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack }) => {
-  const [loading, setLoading] = useState(false);
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showEntries, setShowEntries] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Mock data สำหรับลูกค้าของเช็คเกอร์
-  const mockCustomers = [
-    {
-      id: 1,
-      code: 'CUST-001',
-      fullName: 'สมชาย ใจดี',
-      idCard: '1234567890123',
-      nickname: 'ชาย',
-      status: 'active',
-      phone: '081-234-5678',
-      address: '123 ถนนสุขุมวิท กรุงเทพฯ 10110'
-    },
-    {
-      id: 2,
-      code: 'CUST-002',
-      fullName: 'อุดมศักดิ์ ประถมทอง',
-      idCard: '2345678901234',
-      nickname: 'อุดม',
-      status: 'overdue',
-      phone: '082-345-6789',
-      address: '456 ถนนรัชดาภิเษก กรุงเทพฯ 10400'
-    },
-    {
-      id: 3,
-      code: 'CUST-003',
-      fullName: 'ลินนา กล่อมเกลี้ยง',
-      idCard: '3456789012345',
-      nickname: 'ลิน',
-      status: 'completed',
-      phone: '083-456-7890',
-      address: '789 ถนนลาดพร้าว กรุงเทพฯ 10310'
+  // Load customers for this checker
+  useEffect(() => {
+    if (checker?.id) {
+      loadCustomers();
     }
-  ];
+  }, [checker?.id, searchTerm, statusFilter]);
+
+  const loadCustomers = async () => {
+    try {
+      setLoading(true);
+      const params = {};
+      
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+      
+      if (statusFilter && statusFilter !== 'all') {
+        params.status = statusFilter;
+      }
+      
+      const response = await api.get(`/customers/checker/${checker.id}/contracts`, { params });
+      
+      if (response.data?.success) {
+        setCustomers(response.data.data || []);
+      } else {
+        setCustomers([]);
+      }
+    } catch (error) {
+      console.error('Error loading customers for checker:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถโหลดข้อมูลลูกค้าได้",
+        variant: "destructive"
+      });
+      setCustomers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleExport = () => {
     toast({
@@ -78,14 +87,28 @@ const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack }
   const viewCustomer = (customer) => {
     toast({
       title: "ดูข้อมูลลูกค้า",
-      description: `ดูข้อมูล ${customer.fullName}`,
+      description: `ดูข้อมูล ${customer.full_name}`,
     });
   };
 
   const editCustomer = (customer) => {
     toast({
       title: "แก้ไขข้อมูลลูกค้า",
-      description: `แก้ไขข้อมูล ${customer.fullName}`,
+      description: `แก้ไขข้อมูล ${customer.full_name}`,
+    });
+  };
+
+  const viewContracts = (customer) => {
+    toast({
+      title: "ดูสัญญาของลูกค้า",
+      description: `ดูสัญญาของ ${customer.full_name}`,
+    });
+  };
+
+  const viewGuarantor = (customer) => {
+    toast({
+      title: "ดูข้อมูลผู้ค้ำ",
+      description: `ผู้ค้ำ: ${customer.guarantor_name}`,
     });
   };
 
@@ -104,17 +127,7 @@ const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack }
     );
   };
 
-  const filteredCustomers = mockCustomers.filter(customer => {
-    const matchesSearch = 
-      customer.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.idCard.includes(searchTerm) ||
-      customer.nickname.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || customer.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
+  const filteredCustomers = customers;
 
   return (
     <div className="space-y-6">
@@ -135,26 +148,35 @@ const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack }
                 ลูกค้าของ {checker?.fullName}
               </h1>
               <p className="text-gray-600 mt-1">
-                สาขา {currentBranch?.name || 'ทั้งหมด'} | ลูกค้าทั้งหมด: {filteredCustomers.length} คน
+                สาขา {currentBranch?.name || 'ทั้งหมด'} | ลูกค้าทั้งหมด: {customers.length} คน
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={handlePrint}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
-            >
-              <Printer className="w-4 h-4 mr-2" />
-              พิมพ์รายงาน
-            </Button>
-            <Button
-              onClick={handleExport}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              ส่งออก
-            </Button>
-          </div>
+                      <div className="flex items-center gap-3">
+              <Button
+                onClick={loadCustomers}
+                variant="outline"
+                className="flex items-center gap-2"
+                disabled={loading}
+              >
+                <Loader2 className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                รีเฟรช
+              </Button>
+              <Button
+                onClick={handlePrint}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                <Printer className="w-4 h-4 mr-2" />
+                พิมพ์รายงาน
+              </Button>
+              <Button
+                onClick={handleExport}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                ส่งออก
+              </Button>
+            </div>
         </div>
       </div>
 
@@ -265,7 +287,24 @@ const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack }
                     </div>
                   </div>
                 </th>
-
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    เบอร์โทร
+                    <div className="flex flex-col">
+                      <ChevronUp className="w-3 h-3 text-gray-400" />
+                      <ChevronDown className="w-3 h-3 text-gray-400" />
+                    </div>
+                  </div>
+                </th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    สัญญา
+                    <div className="flex flex-col">
+                      <ChevronUp className="w-3 h-3 text-gray-400" />
+                      <ChevronDown className="w-3 h-3 text-gray-400" />
+                    </div>
+                  </div>
+                </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                   <div className="flex items-center gap-2">
                     สถานะ
@@ -283,7 +322,7 @@ const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack }
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-12 text-center">
+                  <td colSpan="10" className="px-6 py-12 text-center">
                     <div className="flex items-center justify-center">
                       <Loader2 className="w-6 h-6 animate-spin mr-2" />
                       <span>กำลังโหลดข้อมูล...</span>
@@ -292,7 +331,7 @@ const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack }
                 </tr>
               ) : filteredCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-12 text-center">
+                  <td colSpan="10" className="px-6 py-12 text-center">
                     <div className="text-gray-500">
                       <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                       <p>ไม่พบข้อมูลลูกค้า</p>
@@ -317,16 +356,41 @@ const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack }
                     <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="flex items-center gap-2">
                         <User className="w-4 h-4 text-gray-400" />
-                        {customer.fullName}
+                        {customer.full_name}
                       </div>
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">
-                      {customer.idCard}
+                      {customer.id_card}
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
                       <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
                         {customer.nickname}
                       </span>
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="flex items-center gap-1">
+                        <Phone className="w-3 h-3 text-gray-400" />
+                        {customer.phone1 || customer.phone2 || customer.phone3 || '-'}
+                      </div>
+                      {customer.address && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          <MapPin className="w-3 h-3 inline mr-1" />
+                          {customer.address}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1">
+                          <FileText className="w-3 h-3 text-gray-400" />
+                          <span className="font-medium">{customer.contract_count || 0}</span>
+                        </div>
+                        {customer.total_contracts_amount && (
+                          <div className="text-xs text-gray-500">
+                            ฿{parseFloat(customer.total_contracts_amount).toLocaleString()}
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
                       {getStatusBadge(customer.status)}
@@ -341,6 +405,24 @@ const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack }
                           <Eye className="w-3 h-3 mr-1" />
                           ดู
                         </Button>
+                        <Button
+                          size="sm"
+                          className="bg-purple-600 hover:bg-purple-700 text-white"
+                          onClick={() => viewContracts(customer)}
+                        >
+                          <FileText className="w-3 h-3 mr-1" />
+                          สัญญา
+                        </Button>
+                        {customer.guarantor_name && (
+                          <Button
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                            onClick={() => viewGuarantor(customer)}
+                          >
+                            <Shield className="w-3 h-3 mr-1" />
+                            ผู้ค้ำ
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           className="bg-yellow-600 hover:bg-yellow-700 text-white"
@@ -378,8 +460,8 @@ const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack }
           <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
             <div>
               <p className="text-sm text-gray-700">
-                Showing <span className="font-medium">1</span> to <span className="font-medium">{filteredCustomers.length}</span> of{' '}
-                <span className="font-medium">{filteredCustomers.length}</span> entries
+                Showing <span className="font-medium">1</span> to <span className="font-medium">{customers.length}</span> of{' '}
+                <span className="font-medium">{customers.length}</span> entries
               </p>
             </div>
             <div>

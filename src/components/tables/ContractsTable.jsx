@@ -6,12 +6,13 @@ import {
   Printer,
   Eye,
   Edit,
+  Trash2,
   CheckCircle,
   Clock,
   AlertCircle
 } from 'lucide-react';
 
-const ContractsTable = ({ contracts, onPrint, onView, onEdit }) => {
+const ContractsTable = ({ contracts, onPrint, onView, onEdit, onDelete }) => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'active': return 'bg-green-100 text-green-800';
@@ -59,7 +60,7 @@ const ContractsTable = ({ contracts, onPrint, onView, onEdit }) => {
             <th className="text-left py-3 px-4 font-medium text-gray-700">ลูกค้า</th>
             <th className="text-left py-3 px-4 font-medium text-gray-700">สินค้า</th>
             <th className="text-left py-3 px-4 font-medium text-gray-700">ผ่อน/เดือน</th>
-            <th className="text-left py-3 px-4 font-medium text-gray-700">พนักงาน</th>
+            <th className="text-left py-3 px-4 font-medium text-gray-700 w-48">พนักงาน</th>
             <th className="text-left py-3 px-4 font-medium text-gray-700">สถานะ</th>
             <th className="text-left py-3 px-4 font-medium text-gray-700">การดำเนินการ</th>
           </tr>
@@ -97,8 +98,9 @@ const ContractsTable = ({ contracts, onPrint, onView, onEdit }) => {
               </td>
               <td className="py-3 px-4">
                 <div className="text-gray-900">
-                  <div className="font-medium">{contract.employeeName || contract.salespersonFullName || 'ไม่ระบุ'}</div>
-                  <div className="text-xs text-gray-500">ผู้ตรวจสอบ: {contract.inspectorName || contract.inspectorFullName || 'ไม่ระบุ'}</div>
+                  <div className="font-medium text-blue-600">{contract.employeeName || contract.salespersonFullName || 'ไม่ระบุ'}</div>
+                  <div className="text-xs text-purple-600">ผู้ตรวจสอบ: {contract.inspectorName || contract.inspectorFullName || 'ไม่ระบุ'}</div>
+                  <div className="text-xs text-green-600">สาย: {contract.line || 'ไม่ระบุ'}</div>
                 </div>
               </td>
               <td className="py-3 px-4">
@@ -134,6 +136,15 @@ const ContractsTable = ({ contracts, onPrint, onView, onEdit }) => {
                   >
                     <Edit className="w-3 h-3 mr-1" />
                     แก้ไข
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onDelete(contract)}
+                    className="text-red-600 border-red-200 hover:bg-red-50 text-xs px-2 py-1"
+                  >
+                    <Trash2 className="w-3 h-3 mr-1" />
+                    ลบ
                   </Button>
                 </div>
               </td>

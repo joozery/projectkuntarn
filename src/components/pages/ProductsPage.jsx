@@ -2,129 +2,119 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
-import { Package, Plus, DollarSign, Trash2, Building2, Loader2 } from 'lucide-react';
+import { Package, Plus, DollarSign, Trash2, Building2, Loader2, Search, Filter, ChevronLeft, ChevronRight, Edit } from 'lucide-react';
 import ProductForm from '@/components/ProductForm';
-import { productsService } from '@/services/productsService';
+import { inventoryService } from '@/services/inventoryService';
+import { contractsService } from '@/services/contractsService';
 
 const ProductsPage = ({ selectedBranch, currentBranch }) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(15);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [contracts, setContracts] = useState([]);
+
+
 
   useEffect(() => {
-    if (selectedBranch) {
-      loadProducts();
-    } else {
-      setProducts([]);
-    }
-  }, [selectedBranch]);
-
-  // Force refresh when component mounts
-  useEffect(() => {
-    if (selectedBranch) {
-      const timer = setTimeout(() => {
-        loadProducts();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, []);
-
-  const loadProducts = async () => {
-    try {
+    const loadProducts = async () => {
       setLoading(true);
-      console.log('Loading products for branch:', selectedBranch);
-      
-      if (!selectedBranch) {
-        console.log('No selectedBranch, using empty array');
-        setProducts([]);
-        return;
+      try {
+        const response = await inventoryService.getAll({
+          branchId: selectedBranch,
+          page: currentPage,
+          limit: itemsPerPage
+        });
+        
+        if (response.data.success) {
+          setProducts(response.data.data);
+        } else {
+          console.error('Error loading products:', response.data.message);
+        }
+        setLoading(false);
+      } catch (error) {
+        console.error('Error loading products:', error);
+        setLoading(false);
       }
-      
-      const response = await productsService.getAll(selectedBranch);
-      console.log('Products API response:', response);
-      
-      // Handle different response formats
-      let productsData = [];
-      if (response.data && response.data.success && Array.isArray(response.data.data)) {
-        // Format: { success: true, data: [...] }
-        productsData = response.data.data;
-      } else if (Array.isArray(response.data)) {
-        // Format: direct array
-        productsData = response.data;
-      } else if (response.data && Array.isArray(response.data)) {
-        // Fallback
-        productsData = response.data;
+    };
+
+    loadProducts();
+    loadContracts();
+  }, [selectedBranch, currentPage]);
+
+  const loadContracts = async () => {
+    try {
+      if (selectedBranch) {
+        const response = await contractsService.getAll(selectedBranch);
+        const contractsData = response.data?.success ? response.data.data : (response.data || []);
+        setContracts(contractsData);
       }
-      
-      console.log('Processed products data:', productsData);
-      setProducts(productsData);
     } catch (error) {
-      console.error('Error loading products:', error);
-      toast({
-        title: "เกิดข้อผิดพลาด",
-        description: "ไม่สามารถโหลดข้อมูลสินค้าได้",
-        variant: "destructive"
-      });
-      setProducts([]); // Set empty array on error
-    } finally {
-      setLoading(false);
+      console.error('Error loading contracts:', error);
+      setContracts([]);
     }
+  };
+
+  // Filter products based on search term
+  const filteredProducts = products.filter(product =>
+    product.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (product.product_code && product.product_code.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (product.contract_number && product.contract_number.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentProducts = filteredProducts.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+
+  // Reset to first page when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
   };
 
   const addProduct = async (productData) => {
     try {
       setSubmitting(true);
       
-      // Validate product data
-      if (!productData.name || !productData.price) {
-        toast({
-          title: "ข้อมูลไม่ครบถ้วน",
-          description: "กรุณากรอกชื่อสินค้าและราคา",
-          variant: "destructive"
+      const inventoryData = {
+        product_name: productData.name,
+        product_code: productData.code || '',
+        contract_number: productData.contract || '',
+        cost_price: productData.price || 0,
+        receive_date: productData.receiveDate || null,
+        remarks: productData.remarks || '',
+        branch_id: selectedBranch
+      };
+      
+      const response = await inventoryService.create(inventoryData);
+      
+      if (response.data.success) {
+        // Reload products to get the updated list
+        const reloadResponse = await inventoryService.getAll({
+          branchId: selectedBranch,
+          page: currentPage,
+          limit: itemsPerPage
         });
-        return;
-      }
-      
-      const newProduct = {
-        ...productData,
-        branchId: selectedBranch,
-        price: parseFloat(productData.price) || 0
-      };
-      
-      console.log('Creating product with data:', newProduct);
-      
-      const response = await productsService.create(newProduct);
-      console.log('Product creation response:', response);
-      
-      let createdProduct;
-      if (response.data && response.data.success && response.data.data) {
-        createdProduct = response.data.data;
-      } else if (response.data) {
-        createdProduct = response.data;
+        
+        if (reloadResponse.data.success) {
+          setProducts(reloadResponse.data.data);
+        }
+        
+        toast({
+          title: "สำเร็จ",
+          description: "เพิ่มสินค้าเรียบร้อยแล้ว",
+        });
       } else {
-        createdProduct = response;
+        throw new Error(response.data.message || 'Failed to create product');
       }
-      
-      // Ensure createdProduct has required fields
-      const validatedProduct = {
-        id: createdProduct.id,
-        name: createdProduct.name || productData.name,
-        description: createdProduct.description || productData.description || '',
-        price: parseFloat(createdProduct.price) || parseFloat(productData.price) || 0,
-        category: createdProduct.category || productData.category || '',
-        branchId: createdProduct.branchId || selectedBranch,
-        branchName: createdProduct.branchName || currentBranch?.name || '',
-        status: createdProduct.status || 'active'
-      };
-      
-      console.log('Validated product to add:', validatedProduct);
-      
-      setProducts(prev => [validatedProduct, ...prev]);
-      
-      toast({
-        title: "สำเร็จ",
-        description: "เพิ่มสินค้าเรียบร้อยแล้ว",
-      });
     } catch (error) {
       console.error('Error adding product:', error);
       toast({
@@ -139,13 +129,27 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
 
   const deleteProduct = async (productId) => {
     try {
-      await productsService.delete(productId);
-      setProducts(prev => prev.filter(product => product.id !== productId));
+      const response = await inventoryService.delete(productId);
       
-      toast({
-        title: "สำเร็จ",
-        description: "ลบสินค้าเรียบร้อยแล้ว",
-      });
+      if (response.data.success) {
+        // Reload products to get the updated list
+        const reloadResponse = await inventoryService.getAll({
+          branchId: selectedBranch,
+          page: currentPage,
+          limit: itemsPerPage
+        });
+        
+        if (reloadResponse.data.success) {
+          setProducts(reloadResponse.data.data);
+        }
+        
+        toast({
+          title: "สำเร็จ",
+          description: "ลบสินค้าเรียบร้อยแล้ว",
+        });
+      } else {
+        throw new Error(response.data.message || 'Failed to delete product');
+      }
     } catch (error) {
       console.error('Error deleting product:', error);
       toast({
@@ -154,6 +158,62 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
         variant: "destructive"
       });
     }
+  };
+
+  const editProduct = (product) => {
+    setEditingProduct(product);
+  };
+
+  const updateProduct = async (updatedData) => {
+    try {
+      setSubmitting(true);
+      
+      const inventoryData = {
+        product_name: updatedData.productName || editingProduct.product_name,
+        product_code: updatedData.productCode || editingProduct.product_code,
+        contract_number: updatedData.contract || editingProduct.contract_number,
+        cost_price: parseFloat(updatedData.costPrice?.replace(/,/g, '')) || editingProduct.cost_price,
+        receive_date: updatedData.receiveDate || editingProduct.receive_date,
+        remarks: updatedData.remarks || editingProduct.remarks
+      };
+      
+      const response = await inventoryService.update(editingProduct.id, inventoryData);
+      
+      if (response.data.success) {
+        // Reload products to get the updated list
+        const reloadResponse = await inventoryService.getAll({
+          branchId: selectedBranch,
+          page: currentPage,
+          limit: itemsPerPage
+        });
+        
+        if (reloadResponse.data.success) {
+          setProducts(reloadResponse.data.data);
+        }
+        
+        setEditingProduct(null);
+        
+        toast({
+          title: "สำเร็จ",
+          description: "แก้ไขสินค้าเรียบร้อยแล้ว",
+        });
+      } else {
+        throw new Error(response.data.message || 'Failed to update product');
+      }
+    } catch (error) {
+      console.error('Error updating product:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถแก้ไขสินค้าได้",
+        variant: "destructive"
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingProduct(null);
   };
 
   if (loading) {
@@ -165,24 +225,9 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
             <p className="text-gray-600">กำลังโหลดข้อมูล...</p>
           </div>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="animate-pulse">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-              </div>
-            </div>
-          </div>
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-                <span className="ml-2 text-gray-500">กำลังโหลดข้อมูลสินค้า...</span>
-              </div>
-            </div>
-          </div>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+          <span className="ml-2 text-gray-500">กำลังโหลดข้อมูลสินค้า...</span>
         </div>
       </div>
     );
@@ -197,98 +242,240 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <Package className="w-4 h-4" />
-          <span>สินค้าทั้งหมด: {Array.isArray(products) ? products.length : 0} รายการ</span>
+          <span>สินค้าทั้งหมด: {products.length} รายการ</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="mb-4 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
-              <div className="flex items-center gap-2 text-sm text-emerald-700">
-                <Building2 className="w-4 h-4" />
-                <span>สินค้าจะถูกเพิ่มในสาขา: <strong>{currentBranch?.name}</strong></span>
-              </div>
-            </div>
-            <ProductForm onAddProduct={addProduct} submitting={submitting} />
+      {/* Add/Edit Product Form Section */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="mb-4 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+          <div className="flex items-center gap-2 text-sm text-emerald-700">
+            <Building2 className="w-4 h-4" />
+            <span>สินค้าจะถูกเพิ่มในสาขา: <strong>{currentBranch?.name}</strong></span>
           </div>
         </div>
-        
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Package className="w-5 h-5" />
-                รายการสินค้า
-              </h2>
-            </div>
-            
-            <div className="p-6">
-              {!Array.isArray(products) || products.length === 0 ? (
-                <div className="text-center py-12">
-                  <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">ยังไม่มีสินค้า</h3>
-                  <p className="text-gray-500 mb-4">เริ่มต้นโดยการเพิ่มสินค้าแรกของคุณในสาขานี้</p>
-                  <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
-                    <Plus className="w-4 h-4 mr-2" />
-                    เพิ่มสินค้า
-                  </Button>
-                </div>
-              ) : (
-                <div className="grid gap-4">
-                  {Array.isArray(products) && products.map((product, index) => {
-                    // Validate product data before rendering
-                    if (!product || !product.id) {
-                      console.warn('Invalid product data:', product);
-                      return null;
-                    }
-                    
-                    return (
-                      <motion.div
-                        key={product.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="text-lg font-semibold text-gray-900">{product.name || 'ไม่มีชื่อ'}</h3>
-                              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                                {product.branchName || 'ไม่ระบุสาขา'}
-                              </span>
-                            </div>
-                            <p className="text-gray-600 mb-3">{product.description || 'ไม่มีคำอธิบาย'}</p>
-                            <div className="flex items-center gap-4 text-sm">
-                              <span className="flex items-center gap-1 text-green-600 font-medium">
-                                <DollarSign className="w-4 h-4" />
-                                ฿{(product.price || 0).toLocaleString()}
-                              </span>
-                              <span className="flex items-center gap-1 text-gray-500">
-                                <Package className="w-4 h-4" />
-                                หมวด: {product.category || 'ไม่ระบุ'}
-                              </span>
-                            </div>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => deleteProduct(product.id)}
-                            className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              )}
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          {editingProduct ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่'}
+        </h2>
+        {editingProduct ? (
+          <div className="space-y-4">
+            <ProductForm 
+              onAddProduct={updateProduct} 
+              submitting={submitting}
+              contracts={contracts}
+              initialData={{
+                productCode: editingProduct.product_code || '',
+                productName: editingProduct.product_name || '',
+                contract: editingProduct.contract_number || '',
+                costPrice: editingProduct.cost_price ? editingProduct.cost_price.toString() : '',
+                receiveDate: editingProduct.receive_date ? editingProduct.receive_date.split('T')[0] : '',
+                remarks: editingProduct.remarks || ''
+              }}
+            />
+            <div className="flex gap-2">
+              <Button
+                onClick={cancelEdit}
+                variant="outline"
+                className="flex-1"
+              >
+                ยกเลิก
+              </Button>
             </div>
           </div>
+        ) : (
+          <ProductForm onAddProduct={addProduct} submitting={submitting} contracts={contracts} />
+        )}
+      </div>
+
+      {/* Search and Filter Bar */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div className="flex items-center gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="ค้นหาสินค้า รหัส หรือสัญญา..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <Button variant="outline" className="flex items-center gap-2">
+            <Filter className="w-4 h-4" />
+            กรอง
+          </Button>
         </div>
       </div>
+
+      {/* Products Table */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ลำดับ</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ว.ด.ป./รับ</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">รหัสสินค้า</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สินค้า</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สัญญา</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ราคาต้นทุน</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ว.ด.ป./ขาย</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ต้นทุนขาย</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">คงเหลือ</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">รับ</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ขาย</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">คงเหลือ</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">หมายเหตุ</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {currentProducts.map((product) => (
+                <motion.tr
+                  key={product.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="hover:bg-gray-50 transition-colors"
+                >
+                  <td className="px-4 py-3 text-sm text-gray-900 font-medium">{product.sequence}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                    {product.receive_date ? new Date(product.receive_date).toLocaleDateString('th-TH') : '-'}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900">{product.product_code || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate" title={product.product_name}>
+                    {product.product_name}
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    {product.contract_number ? (
+                      <span className="text-red-600 font-medium">{product.contract_number}</span>
+                    ) : (
+                      '-'
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                    {product.cost_price ? product.cost_price.toLocaleString() : '-'}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                    {product.sell_date ? new Date(product.sell_date).toLocaleDateString('th-TH') : '-'}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                    {product.selling_cost ? product.selling_cost.toLocaleString() : '-'}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900">{product.remaining_quantity1}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900">{product.received_quantity}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900">{product.sold_quantity || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900">{product.remaining_quantity2}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate" title={product.remarks}>
+                    {product.remarks ? (
+                      <span className={product.remarks.includes('มาวันที่') ? 'text-red-600' : ''}>
+                        {product.remarks}
+                      </span>
+                    ) : (
+                      '-'
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => editProduct(product)}
+                        className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => deleteProduct(product.id)}
+                        className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        
+        {currentProducts.length === 0 && (
+          <div className="text-center py-12">
+            <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">ไม่พบสินค้า</h3>
+            <p className="text-gray-500">ลองเปลี่ยนคำค้นหาหรือเพิ่มสินค้าใหม่</p>
+          </div>
+        )}
+      </div>
+
+      {/* Pagination */}
+      {filteredProducts.length > itemsPerPage && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-700">
+              แสดง {indexOfFirstItem + 1} ถึง {Math.min(indexOfLastItem, filteredProducts.length)} จาก {filteredProducts.length} รายการ
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="flex items-center gap-1"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                ก่อนหน้า
+              </Button>
+              
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, index) => {
+                  const pageNumber = index + 1;
+                  // Show first page, last page, current page, and pages around current page
+                  if (
+                    pageNumber === 1 ||
+                    pageNumber === totalPages ||
+                    (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                  ) {
+                    return (
+                      <Button
+                        key={pageNumber}
+                        variant={pageNumber === currentPage ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handlePageChange(pageNumber)}
+                        className="w-8 h-8 p-0"
+                      >
+                        {pageNumber}
+                      </Button>
+                    );
+                  } else if (
+                    pageNumber === currentPage - 2 ||
+                    pageNumber === currentPage + 2
+                  ) {
+                    return (
+                      <span key={pageNumber} className="px-2 text-gray-500">
+                        ...
+                      </span>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="flex items-center gap-1"
+              >
+                ถัดไป
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import { customersService } from '@/services/customersService';
-import { productsService } from '@/services/productsService';
+import { inventoryService } from '@/services/inventoryService';
 import { employeesService } from '@/services/employeesService';
 import { checkersService } from '@/services/checkersService';
 import { 
@@ -82,9 +82,13 @@ const SearchableSelectField = ({ label, value, onChange, options, placeholder, r
   useEffect(() => {
     const filtered = options.filter(option => 
       option.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      option.product_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       option.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       option.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      option.code?.toLowerCase().includes(searchTerm.toLowerCase())
+      option.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      option.nickname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      option.product_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      option.surname?.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredOptions(filtered);
   }, [searchTerm, options]);
@@ -97,7 +101,7 @@ const SearchableSelectField = ({ label, value, onChange, options, placeholder, r
       <div className="relative">
         <input
           type="text"
-          value={isOpen ? searchTerm : (selectedOption?.name || selectedOption?.full_name || selectedOption?.fullName || '')}
+          value={isOpen ? searchTerm : (selectedOption?.name || selectedOption?.product_name || selectedOption?.full_name || selectedOption?.fullName || selectedOption?.nickname || '')}
           onChange={(e) => {
             if (isOpen) {
               setSearchTerm(e.target.value);
@@ -133,8 +137,11 @@ const SearchableSelectField = ({ label, value, onChange, options, placeholder, r
                     setSearchTerm('');
                   }}
                 >
-                  <div className="font-medium">{option.name || option.full_name || option.fullName}</div>
-                  {option.code && <div className="text-xs text-gray-500">{option.code}</div>}
+                  <div className="font-medium">{option.name || option.product_name || option.full_name || option.fullName || option.nickname}</div>
+                  {option.phone && <div className="text-xs text-gray-500">{option.phone}</div>}
+                  {option.product_code && <div className="text-xs text-gray-500">{option.product_code}</div>}
+                  {option.surname && <div className="text-xs text-gray-500">{option.surname}</div>}
+                  {option.position && <div className="text-xs text-gray-400">{option.position}</div>}
                 </div>
               ))
             ) : (
@@ -178,16 +185,18 @@ const ContractForm = ({
 }) => {
   const [allCustomers, setAllCustomers] = useState([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
-  const [allProducts, setAllProducts] = useState([]);
-  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [allInventory, setAllInventory] = useState([]);
+  const [loadingInventory, setLoadingInventory] = useState(false);
   const [allEmployees, setAllEmployees] = useState([]);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
   const [allCheckers, setAllCheckers] = useState([]);
   const [loadingCheckers, setLoadingCheckers] = useState(false);
+  const [allCollectors, setAllCollectors] = useState([]);
+  const [loadingCollectors, setLoadingCollectors] = useState(false);
 
   console.log('ContractForm props:', { 
     customersCount: customers?.length || 0, 
-    productsCount: products?.length || 0, 
+    inventoryCount: products?.length || 0, 
     employeesCount: employees?.length || 0,
     selectedBranch,
     currentBranch,
@@ -202,13 +211,15 @@ const ContractForm = ({
 
   console.log('ContractForm state:', {
     allCustomersCount: allCustomers?.length || 0,
-    allProductsCount: allProducts?.length || 0,
+    allInventoryCount: allInventory?.length || 0,
     allEmployeesCount: allEmployees?.length || 0,
     allCheckersCount: allCheckers?.length || 0,
+    allCollectorsCount: allCollectors?.length || 0,
     loadingCustomers,
-    loadingProducts,
+    loadingInventory,
     loadingEmployees,
-    loadingCheckers
+    loadingCheckers,
+    loadingCollectors
   });
 
   console.log('ContractForm allCheckers data:', allCheckers);
@@ -253,44 +264,44 @@ const ContractForm = ({
     loadCustomers();
   }, [selectedBranch]);
 
-  // Load products from API
+  // Load inventory from API
   useEffect(() => {
-    const loadProducts = async () => {
+    const loadInventory = async () => {
       if (!selectedBranch) return;
       
       try {
-        setLoadingProducts(true);
-        console.log('Loading products from API for branch:', selectedBranch);
+        setLoadingInventory(true);
+        console.log('Loading inventory from API for branch:', selectedBranch);
         
-        const response = await productsService.getAll(selectedBranch);
-        console.log('Products API response:', response);
+        const response = await inventoryService.getAll({ branchId: selectedBranch });
+        console.log('Inventory API response:', response);
         
         // Handle different response formats
-        let productsData = [];
+        let inventoryData = [];
         if (response.data?.success && Array.isArray(response.data.data)) {
-          productsData = response.data.data;
+          inventoryData = response.data.data;
         } else if (Array.isArray(response.data)) {
-          productsData = response.data;
+          inventoryData = response.data;
         } else if (response.data && Array.isArray(response.data)) {
-          productsData = response.data;
+          inventoryData = response.data;
         }
         
-        console.log('Processed products data:', productsData);
-        setAllProducts(productsData);
+        console.log('Processed inventory data:', inventoryData);
+        setAllInventory(inventoryData);
       } catch (error) {
-        console.error('Error loading products:', error);
+        console.error('Error loading inventory:', error);
         toast({
           title: "เกิดข้อผิดพลาด",
           description: "ไม่สามารถโหลดข้อมูลสินค้าได้",
           variant: "destructive"
         });
-        setAllProducts([]);
+        setAllInventory([]);
       } finally {
-        setLoadingProducts(false);
+        setLoadingInventory(false);
       }
     };
 
-    loadProducts();
+    loadInventory();
   }, [selectedBranch]);
 
   // Load employees from API
@@ -368,6 +379,7 @@ const ContractForm = ({
         }
         
         console.log('📋 Processed checkers data:', checkersData);
+        console.log('📋 Sample checker item:', checkersData[0]);
         setAllCheckers(checkersData);
       } catch (error) {
         console.error('❌ Error loading checkers:', error);
@@ -391,6 +403,53 @@ const ContractForm = ({
     console.log('🚀 Setting up loadCheckers useEffect for selectedBranch:', selectedBranch);
     loadCheckers();
   }, [selectedBranch]);
+
+  // Load collectors from API
+  useEffect(() => {
+    const loadCollectors = async () => {
+      if (!selectedBranch) return;
+      
+      try {
+        setLoadingCollectors(true);
+        console.log('Loading collectors from API for branch:', selectedBranch);
+        
+        // Use the same API as CollectorsPage
+        const response = await employeesService.getAll(selectedBranch);
+        console.log('Collectors API response:', response);
+        
+        // Handle different response formats
+        let employeesData = [];
+        if (response.data?.success && Array.isArray(response.data.data)) {
+          employeesData = response.data.data;
+        } else if (Array.isArray(response.data)) {
+          employeesData = response.data;
+        } else if (response.data && Array.isArray(response.data)) {
+          employeesData = response.data;
+        }
+        
+        // Filter only collectors (same logic as CollectorsPage)
+        const collectorsData = employeesData.filter(emp => 
+          emp.position === 'collector' || emp.position === 'พนักงานเก็บเงิน'
+        );
+        
+        console.log('Processed collectors data:', collectorsData);
+        setAllCollectors(collectorsData);
+      } catch (error) {
+        console.error('Error loading collectors:', error);
+        toast({
+          title: "เกิดข้อผิดพลาด",
+          description: "ไม่สามารถโหลดข้อมูลพนักงานเก็บเงินได้",
+          variant: "destructive"
+        });
+        setAllCollectors([]);
+      } finally {
+        setLoadingCollectors(false);
+      }
+    };
+
+    loadCollectors();
+  }, [selectedBranch]);
+
   const [contractForm, setContractForm] = useState({
     contractNumber: '',
     customerId: '',
@@ -444,7 +503,7 @@ const ContractForm = ({
     },
           salespersonId: '',
       inspectorId: '',
-      line: '',
+      collectorId: '',
     contractDate: new Date().toISOString().split('T')[0],
   });
 
@@ -532,29 +591,29 @@ const ContractForm = ({
 
   useEffect(() => {
     if (contractForm.productId) {
-      const product = allProducts.find(p => p.id === contractForm.productId);
-      if (product) {
-        console.log('Auto-filling product details:', product);
+      const inventory = allInventory.find(p => p.id === contractForm.productId);
+      if (inventory) {
+        console.log('Auto-filling inventory details:', inventory);
         setContractForm(prev => ({
           ...prev,
           productDetails: {
             ...prev.productDetails,
-            name: product.name || '',
-            description: product.description || '',
-            price: product.price || '',
-            category: product.category || '',
-            model: product.model || '',
-            serialNumber: product.serialNumber || ''
+            name: inventory.product_name || '',
+            description: inventory.remarks || '',
+            price: inventory.cost_price || '',
+            category: inventory.product_code || '',
+            model: inventory.product_code || '',
+            serialNumber: inventory.sequence || ''
           }
         }));
         
         toast({
           title: "ข้อมูลสินค้าถูกกรอกอัตโนมัติ",
-          description: `ข้อมูลของ ${product.name} ถูกกรอกเรียบร้อยแล้ว`,
+          description: `ข้อมูลของ ${inventory.product_name} ถูกกรอกเรียบร้อยแล้ว`,
         });
       }
     }
-  }, [contractForm.productId, allProducts]);
+  }, [contractForm.productId, allInventory]);
 
   const handleDetailChange = (section, field, value) => {
     setContractForm(prev => ({
@@ -581,39 +640,105 @@ const ContractForm = ({
     e.preventDefault();
     console.log('🔍 ContractForm handleSubmit - contractForm:', contractForm);
     
-    if (!contractForm.customerId || !contractForm.productId || !contractForm.salespersonId || !contractForm.inspectorId) {
+    if (!contractForm.customerId || !contractForm.productId || !contractForm.salespersonId || !contractForm.inspectorId || !contractForm.collectorId) {
       toast({
         title: "กรุณากรอกข้อมูลให้ครบถ้วน",
-        description: "ลูกค้า, สินค้า, พนักงานขาย และผู้ตรวจสอบเป็นข้อมูลที่จำเป็น",
+        description: "ลูกค้า, สินค้า, พนักงานขาย, ผู้ตรวจสอบ และพนักงานเก็บเงินเป็นข้อมูลที่จำเป็น",
         variant: "destructive"
       });
       return;
     }
 
     // Prepare data for API
-    const selectedProduct = allProducts.find(p => p.id === contractForm.productId);
+    const selectedInventory = allInventory.find(p => p.id === contractForm.productId);
     const selectedCustomer = allCustomers.find(c => c.id === contractForm.customerId);
+    const selectedCollector = allCollectors.find(c => c.id === contractForm.collectorId);
     
+    // Calculate amounts
+    const totalAmount = parseFloat(contractForm.productDetails.price) || 0;
+    const downPayment = parseFloat(contractForm.plan.downPayment) || 0;
+    const monthlyPayment = parseFloat(contractForm.plan.monthlyPayment) || 0;
+    const months = parseInt(contractForm.plan.months) || 12;
+    const installmentAmount = monthlyPayment;
+    const remainingAmount = totalAmount - downPayment;
+
+    // Calculate end date
+    const startDate = new Date(contractForm.contractDate);
+    const endDate = new Date(startDate);
+    endDate.setMonth(endDate.getMonth() + months);
+
     const contractData = {
-      ...contractForm,
-      // Send contractNumber if provided, otherwise undefined (backend will generate)
+      // Contract basic info
       contractNumber: contractForm.contractNumber || undefined,
-      // Add required fields for API
-      productName: selectedProduct?.name || '',
-      totalAmount: parseFloat(contractForm.productDetails.price) || 0,
-      installmentPeriod: parseInt(contractForm.plan.months) || 12,
-      startDate: contractForm.contractDate,
-      endDate: (() => {
-        const start = new Date(contractForm.contractDate);
-        const months = parseInt(contractForm.plan.months) || 12;
-        start.setMonth(start.getMonth() + months);
-        return start.toISOString().split('T')[0];
-      })(),
-      // Map plan data
-      plan: {
-        ...contractForm.plan,
-        monthlyPayment: parseFloat(contractForm.plan.monthlyPayment) || 0
-      }
+      contractDate: contractForm.contractDate,
+      customerId: contractForm.customerId,
+      productId: contractForm.productId,
+      productName: selectedInventory?.product_name || '',
+      totalAmount: totalAmount,
+      installmentAmount: installmentAmount,
+      remainingAmount: remainingAmount,
+      installmentPeriod: months,
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0],
+      branchId: selectedBranch,
+      salespersonId: contractForm.salespersonId,
+      inspectorId: contractForm.inspectorId,
+      line: selectedCollector?.code || selectedCollector?.name || '',
+
+      // Customer details (mapped to individual fields)
+      customerTitle: contractForm.customerDetails.title,
+      customerAge: parseInt(contractForm.customerDetails.age) || null,
+      customerMoo: contractForm.customerDetails.moo,
+      customerRoad: contractForm.customerDetails.road,
+      customerSubdistrict: contractForm.customerDetails.subdistrict,
+      customerDistrict: contractForm.customerDetails.district,
+      customerProvince: contractForm.customerDetails.province,
+      customerPhone1: contractForm.customerDetails.phone1,
+      customerPhone2: contractForm.customerDetails.phone2,
+      customerPhone3: contractForm.customerDetails.phone3,
+      customerEmail: contractForm.customerDetails.email,
+      customerIdCard: contractForm.customerDetails.idCard,
+      customerName: contractForm.customerDetails.name,
+      customerSurname: contractForm.customerDetails.surname,
+      customerNickname: contractForm.customerDetails.nickname,
+      // Additional customer fields
+      customerAddress: contractForm.customerDetails.address,
+
+      // Guarantor details (mapped to individual fields)
+      guarantorId: contractForm.guarantorId,
+      guarantorTitle: contractForm.guarantorDetails.title,
+      guarantorName: contractForm.guarantorDetails.name,
+      guarantorSurname: contractForm.guarantorDetails.surname,
+      guarantorNickname: contractForm.guarantorDetails.nickname,
+      guarantorAge: parseInt(contractForm.guarantorDetails.age) || null,
+      guarantorIdCard: contractForm.guarantorDetails.idCard,
+      guarantorAddress: contractForm.guarantorDetails.address,
+      guarantorMoo: contractForm.guarantorDetails.moo,
+      guarantorRoad: contractForm.guarantorDetails.road,
+      guarantorSubdistrict: contractForm.guarantorDetails.subdistrict,
+      guarantorDistrict: contractForm.guarantorDetails.district,
+      guarantorProvince: contractForm.guarantorDetails.province,
+      guarantorPhone1: contractForm.guarantorDetails.phone1,
+      guarantorPhone2: contractForm.guarantorDetails.phone2,
+      guarantorPhone3: contractForm.guarantorDetails.phone3,
+      guarantorEmail: contractForm.guarantorDetails.email,
+
+      // Product details
+      productDescription: contractForm.productDetails.description,
+      productCategory: contractForm.productDetails.category,
+      productModel: contractForm.productDetails.model,
+      productSerialNumber: contractForm.productDetails.serialNumber,
+      // Additional product fields from form
+      productName: contractForm.productDetails.name || selectedInventory?.product_name || '',
+
+      // Payment plan
+      downPayment: downPayment,
+      monthlyPayment: monthlyPayment,
+      months: months,
+      collectionDate: contractForm.plan.collectionDate,
+
+      // Status
+      status: 'active'
     };
 
     console.log('🔍 ContractForm handleSubmit - prepared contractData:', contractData);
@@ -727,8 +852,8 @@ const ContractForm = ({
                 label="ชนิดสินค้า" 
                 value={contractForm.productId} 
                 onChange={(e) => handleSelectChange('productId', e.target.value)} 
-                options={allProducts} 
-                placeholder={loadingProducts ? "กำลังโหลดข้อมูล..." : "--พิมพ์ค้นหาสินค้า--"} 
+                options={allInventory} 
+                placeholder={loadingInventory ? "กำลังโหลดข้อมูล..." : "--พิมพ์ค้นหาสินค้า--"} 
                 required
               />
               <InputField label="ราคารวม" value={contractForm.productDetails.price} onChange={(e) => handleDetailChange('productDetails', 'price', e.target.value)} placeholder="ราคารวม" type="number" />
@@ -760,16 +885,12 @@ const ContractForm = ({
                   placeholder={loadingCheckers ? "กำลังโหลดข้อมูล..." : "--เลือกผู้ตรวจสอบ--"} 
                   required
                 />
-                <SelectField 
-                  label="สาย" 
-                  value={contractForm.line} 
-                  onChange={(e) => handleSelectChange('line', e.target.value)} 
-                  options={[
-                    { id: '1', name: 'สาย 1 รณไชยธรรม' },
-                    { id: '2', name: 'สาย 2 เริงศักดิ์' },
-                    { id: '3', name: 'สาย 3 อุดมศักดิ์' }
-                  ]} 
-                  placeholder="--เลือกสาย--"
+                <SearchableSelectField 
+                  label="สาย (พนักงานเก็บเงิน)" 
+                  value={contractForm.collectorId} 
+                  onChange={(e) => handleSelectChange('collectorId', e.target.value)} 
+                  options={allCollectors} 
+                  placeholder={loadingCollectors ? "กำลังโหลดข้อมูล..." : "--เลือกพนักงานเก็บเงิน--"}
                 />
             </div>
         </FormSection>

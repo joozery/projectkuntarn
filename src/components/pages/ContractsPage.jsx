@@ -11,6 +11,7 @@ import { contractsService } from '@/services/contractsService';
 import { customersService } from '@/services/customersService';
 import { productsService } from '@/services/productsService';
 import { employeesService } from '@/services/employeesService';
+import Swal from 'sweetalert2';
 
 const ContractsPage = ({ selectedBranch, currentBranch }) => {
   const [contracts, setContracts] = useState([]);
@@ -175,6 +176,81 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
     setShowEditForm(true);
   };
 
+  const handleDeleteContract = async (contract) => {
+    // Show confirmation dialog with SweetAlert2
+    const result = await Swal.fire({
+      title: 'ยืนยันการลบสัญญา',
+      html: `
+        <div class="text-left">
+          <p class="mb-2">คุณต้องการลบสัญญา <strong>${contract.contractNumber}</strong> ใช่หรือไม่?</p>
+          <div class="bg-gray-100 p-3 rounded-lg text-sm">
+            <p><strong>ลูกค้า:</strong> ${contract.customerName || 'ไม่ระบุ'}</p>
+            <p><strong>สินค้า:</strong> ${contract.productName || 'ไม่ระบุ'}</p>
+            <p><strong>วันที่:</strong> ${new Date(contract.contractDate).toLocaleDateString('th-TH')}</p>
+          </div>
+          <p class="text-red-600 text-sm mt-2">⚠️ การลบสัญญาจะไม่สามารถกู้คืนได้</p>
+        </div>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'ลบสัญญา',
+      cancelButtonText: 'ยกเลิก',
+      reverseButtons: true,
+      customClass: {
+        popup: 'rounded-lg',
+        confirmButton: 'rounded-md',
+        cancelButton: 'rounded-md'
+      }
+    });
+
+    if (result.isConfirmed) {
+      try {
+        // Show loading state
+        Swal.fire({
+          title: 'กำลังลบสัญญา...',
+          text: 'กรุณารอสักครู่',
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          showConfirmButton: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        const response = await contractsService.delete(contract.id);
+        
+        if (response.data?.success) {
+          // Remove the contract from the list
+          setContracts(prev => prev.filter(c => c.id !== contract.id));
+          
+          // Show success message
+          Swal.fire({
+            icon: 'success',
+            title: 'ลบสัญญาเรียบร้อยแล้ว',
+            text: `สัญญา ${contract.contractNumber} ถูกลบออกจากระบบแล้ว`,
+            confirmButtonColor: '#059669',
+            confirmButtonText: 'ตกลง'
+          });
+        } else {
+          throw new Error(response.data?.message || 'เกิดข้อผิดพลาด');
+        }
+      } catch (error) {
+        console.error('Error deleting contract:', error);
+        
+        // Show error message
+        Swal.fire({
+          icon: 'error',
+          title: 'เกิดข้อผิดพลาด',
+          text: error.message || "ไม่สามารถลบสัญญาได้",
+          confirmButtonColor: '#dc2626',
+          confirmButtonText: 'ตกลง'
+        });
+      }
+    }
+  };
+
   const handleEditSuccess = (updatedContract) => {
     // Update the contract in the list
     setContracts(prev => prev.map(contract => 
@@ -319,6 +395,7 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
             onPrint={printContract}
             onView={handleViewContract}
             onEdit={handleEditContract}
+            onDelete={handleDeleteContract}
           />
         </div>
       </div>

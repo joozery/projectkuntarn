@@ -3,9 +3,10 @@ import Dashboard from '@/components/Dashboard';
 import ProductsPage from '@/components/pages/ProductsPage';
 import CustomersPage from '@/components/pages/CustomersPage';
 import EmployeesPage from '@/components/pages/EmployeesPage';
+import CollectorsPage from '@/components/pages/CollectorsPage';
 import CheckersPage from '@/components/pages/CheckersPage';
 import SalesIndexPage from '@/components/pages/SalesIndexPage';
-import InstallmentsPage from '@/components/pages/InstallmentsPage';
+
 import ContractsPage from '@/components/pages/ContractsPage';
 import PaymentsPage from '@/components/pages/PaymentsPage';
 import ReturnsPage from '@/components/pages/ReturnsPage';
@@ -50,6 +51,13 @@ const AdminContent = ({
             currentBranch={currentBranch}
           />
         );
+      case 'salespeople':
+        return (
+          <CollectorsPage 
+            selectedBranch={selectedBranch}
+            currentBranch={currentBranch}
+          />
+        );
       case 'checkers':
         return (
           <CheckersPage 
@@ -64,13 +72,7 @@ const AdminContent = ({
             currentBranch={currentBranch}
           />
         );
-      case 'installments':
-        return (
-          <InstallmentsPage 
-            selectedBranch={selectedBranch}
-            currentBranch={currentBranch}
-          />
-        );
+
       case 'contracts':
         return (
           <ContractsPage 

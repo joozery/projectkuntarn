@@ -1,41 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
-import { Plus, Package, DollarSign, FileText, Tag } from 'lucide-react';
+import { Plus, Package, DollarSign, FileText, Tag, Hash, FileSignature, Calendar } from 'lucide-react';
 
-const ProductForm = ({ onAddProduct, submitting = false }) => {
+const ProductForm = ({ onAddProduct, submitting = false, initialData = null, contracts = [] }) => {
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    price: '',
-    category: ''
+    productCode: initialData?.productCode || '',
+    productName: initialData?.productName || '',
+    contract: initialData?.contract || '',
+    costPrice: initialData?.costPrice || '',
+    receiveDate: initialData?.receiveDate || '',
+    remarks: initialData?.remarks || ''
   });
 
-  const categories = [
-    'อิเล็กทรอนิกส์',
-    'เครื่องใช้ไฟฟ้า',
-    'เฟอร์นิเจอร์',
-    'รถยนต์',
-    'มอเตอร์ไซค์',
-    'เครื่องประดับ',
-    'อื่นๆ'
-  ];
+  // Update form data when initialData changes (for edit mode)
+  useEffect(() => {
+    if (initialData) {
+      const costPrice = initialData.costPrice ? 
+        (typeof initialData.costPrice === 'string' ? 
+          initialData.costPrice : 
+          parseFloat(initialData.costPrice).toLocaleString()
+        ) : '';
+      
+      setFormData({
+        productCode: initialData.productCode || '',
+        productName: initialData.productName || '',
+        contract: initialData.contract || '',
+        costPrice: costPrice,
+        receiveDate: initialData.receiveDate || '',
+        remarks: initialData.remarks || ''
+      });
+    }
+  }, [initialData]);
+
+
 
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.price || !formData.category) {
+    if (!formData.productName || !formData.costPrice) {
       toast({
         title: "กรุณากรอกข้อมูลให้ครบถ้วน",
-        description: "ชื่อสินค้า, ราคา และหมวดหมู่เป็นข้อมูลที่จำเป็น",
+        description: "ชื่อสินค้าและราคาต้นทุนเป็นข้อมูลที่จำเป็น",
         variant: "destructive"
       });
       return;
     }
 
-    const price = parseFloat(formData.price);
-    if (isNaN(price) || price <= 0) {
+    const costPrice = parseFloat(formData.costPrice.replace(/,/g, ''));
+    if (isNaN(costPrice) || costPrice <= 0) {
       toast({
         title: "ราคาไม่ถูกต้อง",
         description: "กรุณาใส่ราคาที่เป็นตัวเลขและมากกว่า 0",
@@ -46,39 +60,71 @@ const ProductForm = ({ onAddProduct, submitting = false }) => {
 
     onAddProduct({
       ...formData,
-      price: price
+      costPrice: costPrice.toLocaleString(),
+      name: formData.productName,
+      price: costPrice,
+      code: formData.productCode,
+      contract: formData.contract,
+      receiveDate: formData.receiveDate,
+      remarks: formData.remarks
     });
 
-    // Reset form
-    setFormData({
-      name: '',
-      description: '',
-      price: '',
-      category: ''
-    });
+    // Reset form only if not in edit mode
+    if (!initialData) {
+      setFormData({
+        productCode: '',
+        productName: '',
+        contract: '',
+        costPrice: '',
+        receiveDate: '',
+        remarks: ''
+      });
+    }
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    // Format cost price with commas
+    if (name === 'costPrice') {
+      const numericValue = value.replace(/[^\d]/g, '');
+      const formattedValue = numericValue ? parseInt(numericValue).toLocaleString() : '';
+      setFormData(prev => ({
+        ...prev,
+        [name]: formattedValue
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glass-card rounded-2xl p-6"
+      className="space-y-6"
     >
-      <h2 className="text-2xl font-bold gradient-text mb-6 flex items-center gap-2">
-        <Plus className="w-6 h-6" />
-        เพิ่มสินค้าใหม่
-      </h2>
-
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-4 gap-4">
+          {/* Product Code */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <Hash className="w-4 h-4" />
+              รหัสสินค้า
+            </label>
+            <input
+              type="text"
+              name="productCode"
+              value={formData.productCode}
+              onChange={handleChange}
+              placeholder="เช่น R43, N903"
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 bg-white/80 backdrop-blur-sm text-sm"
+            />
+          </div>
+
           {/* Product Name */}
           <div className="space-y-2">
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
@@ -87,90 +133,134 @@ const ProductForm = ({ onAddProduct, submitting = false }) => {
             </label>
             <input
               type="text"
-              name="name"
-              value={formData.name}
+              name="productName"
+              value={formData.productName}
               onChange={handleChange}
-              placeholder="เช่น iPhone 15 Pro Max"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 bg-white/80 backdrop-blur-sm"
+              placeholder="เช่น เครื่องซักผ้า 11 กิโล"
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 bg-white/80 backdrop-blur-sm text-sm"
               required
             />
           </div>
 
-          {/* Price */}
+          {/* Contract */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <FileSignature className="w-4 h-4" />
+              สัญญา
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                name="contract"
+                value={formData.contract}
+                onChange={handleChange}
+                placeholder="พิมพ์ - หรือเลือกเลขที่สัญญา"
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 bg-white/80 backdrop-blur-sm text-sm pr-8"
+              />
+              {contracts.length > 0 && (
+                <select
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setFormData(prev => ({
+                        ...prev,
+                        contract: e.target.value
+                      }));
+                    }
+                  }}
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 w-6 h-6 text-xs border-none bg-transparent focus:outline-none cursor-pointer"
+                >
+                  <option value="">📋</option>
+                  {contracts.map(contract => (
+                    <option key={contract.id} value={contract.contractNumber}>
+                      {contract.contractNumber} - {contract.customerName}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+            {contracts.length > 0 && (
+              <p className="text-xs text-gray-500">
+                💡 สามารถพิมพ์ "-" หรือเลือกเลขที่สัญญาจากระบบ
+              </p>
+            )}
+          </div>
+
+          {/* Cost Price */}
           <div className="space-y-2">
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <DollarSign className="w-4 h-4" />
-              ราคา (บาท) *
+              ราคาต้นทุน *
             </label>
             <input
-              type="number"
-              name="price"
-              value={formData.price}
+              type="text"
+              name="costPrice"
+              value={formData.costPrice}
               onChange={handleChange}
-              placeholder="เช่น 45000"
-              min="1"
-              step="0.01"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 bg-white/80 backdrop-blur-sm"
+              placeholder="เช่น 2,740"
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 bg-white/80 backdrop-blur-sm text-sm"
               required
             />
           </div>
         </div>
 
-        {/* Category */}
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-            <Tag className="w-4 h-4" />
-            หมวดหมู่ *
-          </label>
-          <select
-            name="category"
-            value={formData.category}
-            onChange={handleChange}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 bg-white/80 backdrop-blur-sm"
-            required
-          >
-            <option value="">เลือกหมวดหมู่</option>
-            {categories.map(category => (
-              <option key={category} value={category}>
-                {category}
-              </option>
-            ))}
-          </select>
-        </div>
+        <div className="grid md:grid-cols-3 gap-4">
+          {/* Receive Date */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <Calendar className="w-4 h-4" />
+              ว.ด.ป./รับ
+            </label>
+            <input
+              type="date"
+              name="receiveDate"
+              value={formData.receiveDate}
+              onChange={handleChange}
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 bg-white/80 backdrop-blur-sm text-sm"
+            />
+          </div>
 
-        {/* Description */}
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-            <FileText className="w-4 h-4" />
-            รายละเอียด
-          </label>
-          <textarea
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            placeholder="รายละเอียดเพิ่มเติมของสินค้า..."
-            rows="3"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 bg-white/80 backdrop-blur-sm resize-none"
-          />
-        </div>
+          {/* Remarks */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <FileText className="w-4 h-4" />
+              หมายเหตุ
+            </label>
+            <input
+              type="text"
+              name="remarks"
+              value={formData.remarks}
+              onChange={handleChange}
+              placeholder="เช่น ซ่อมแล้ว, มาวันที่ 23/6/68"
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 bg-white/80 backdrop-blur-sm text-sm"
+            />
+          </div>
 
-        <Button
-          type="submit"
-          disabled={submitting}
-          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {submitting ? (
-            <>
-              <div className="w-5 h-5 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-              กำลังเพิ่มสินค้า...
-            </>
-          ) : (
-            <>
-              <Plus className="w-5 h-5 mr-2" />
+          {/* Submit Button */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 opacity-0">
+              <Plus className="w-4 h-4" />
               เพิ่มสินค้า
-            </>
-          )}
-        </Button>
+            </label>
+            <Button
+              type="submit"
+              disabled={submitting}
+              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 px-4 rounded-lg font-medium text-base transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {submitting ? (
+                <>
+                  <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                  {initialData ? 'กำลังแก้ไขสินค้า...' : 'กำลังเพิ่มสินค้า...'}
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4 mr-2" />
+                  {initialData ? 'แก้ไขสินค้า' : 'เพิ่มสินค้า'}
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
       </form>
     </motion.div>
   );
