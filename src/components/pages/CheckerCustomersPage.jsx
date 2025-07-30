@@ -114,9 +114,10 @@ const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack }
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      active: { label: 'กำลังผ่อน', className: 'bg-green-100 text-green-800' },
+      active: { label: 'กำลังผ่อนชำระ', className: 'bg-green-100 text-green-800' },
       overdue: { label: 'ค้างชำระ', className: 'bg-red-100 text-red-800' },
-      completed: { label: 'ผ่อนเสร็จ', className: 'bg-blue-100 text-blue-800' }
+      completed: { label: 'ผ่อนเสร็จ', className: 'bg-blue-100 text-blue-800' },
+      normal: { label: 'ปกติ', className: 'bg-gray-100 text-gray-800' }
     };
     
     const config = statusConfig[status] || statusConfig.active;
@@ -253,7 +254,7 @@ const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack }
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                   <div className="flex items-center gap-2">
-                    รหัส
+                    เลขที่ทำสัญญา
                     <div className="flex flex-col">
                       <ChevronUp className="w-3 h-3 text-gray-400" />
                       <ChevronDown className="w-3 h-3 text-gray-400" />
@@ -281,6 +282,33 @@ const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack }
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                   <div className="flex items-center gap-2">
                     ชื่อเล่น
+                    <div className="flex flex-col">
+                      <ChevronUp className="w-3 h-3 text-gray-400" />
+                      <ChevronDown className="w-3 h-3 text-gray-400" />
+                    </div>
+                  </div>
+                </th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    ชื่อผู้ค้ำ
+                    <div className="flex flex-col">
+                      <ChevronUp className="w-3 h-3 text-gray-400" />
+                      <ChevronDown className="w-3 h-3 text-gray-400" />
+                    </div>
+                  </div>
+                </th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    เลขบัตรประชาชนผู้ค้ำ
+                    <div className="flex flex-col">
+                      <ChevronUp className="w-3 h-3 text-gray-400" />
+                      <ChevronDown className="w-3 h-3 text-gray-400" />
+                    </div>
+                  </div>
+                </th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    ชื่อเล่นผู้ค้ำ
                     <div className="flex flex-col">
                       <ChevronUp className="w-3 h-3 text-gray-400" />
                       <ChevronDown className="w-3 h-3 text-gray-400" />
@@ -351,7 +379,7 @@ const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack }
                       {index + 1}
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                      {customer.code}
+                      {customer.contract_numbers || '-'}
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="flex items-center gap-2">
@@ -368,16 +396,24 @@ const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack }
                       </span>
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="flex items-center gap-2">
+                        <Shield className="w-4 h-4 text-gray-400" />
+                        {customer.guarantor_name || '-'}
+                      </div>
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">
+                      {customer.guarantor_id_card || '-'}
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                        {customer.guarantor_nickname || '-'}
+                      </span>
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="flex items-center gap-1">
                         <Phone className="w-3 h-3 text-gray-400" />
                         {customer.phone1 || customer.phone2 || customer.phone3 || '-'}
                       </div>
-                      {customer.address && (
-                        <div className="text-xs text-gray-500 mt-1">
-                          <MapPin className="w-3 h-3 inline mr-1" />
-                          {customer.address}
-                        </div>
-                      )}
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="flex flex-col gap-1">

@@ -9,14 +9,14 @@ import ContractsTable from '@/components/tables/ContractsTable';
 import ContractDetailModal from '@/components/ContractDetailModal';
 import { contractsService } from '@/services/contractsService';
 import { customersService } from '@/services/customersService';
-import { productsService } from '@/services/productsService';
+import { inventoryService } from '@/services/inventoryService';
 import { employeesService } from '@/services/employeesService';
 import Swal from 'sweetalert2';
 
 const ContractsPage = ({ selectedBranch, currentBranch }) => {
   const [contracts, setContracts] = useState([]);
   const [customers, setCustomers] = useState([]);
-  const [products, setProducts] = useState([]);
+  const [inventory, setInventory] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -34,7 +34,7 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
     } else {
       setContracts([]);
       setCustomers([]);
-      setProducts([]);
+      setInventory([]);
       setEmployees([]);
     }
   }, [selectedBranch]);
@@ -64,31 +64,31 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
       }
       
       // Load all data in parallel
-      const [contractsRes, customersRes, productsRes, employeesRes] = await Promise.all([
+      const [contractsRes, customersRes, inventoryRes, employeesRes] = await Promise.all([
         contractsService.getAll(selectedBranch),
         customersService.getAll(selectedBranch),
-        productsService.getAll(selectedBranch),
+        inventoryService.getAll({ branchId: selectedBranch }),
         employeesService.getAll(selectedBranch)
       ]);
 
-      console.log('API responses:', { contractsRes, customersRes, productsRes, employeesRes });
+      console.log('API responses:', { contractsRes, customersRes, inventoryRes, employeesRes });
 
       // Handle different response formats
       const contractsData = contractsRes.data?.success ? contractsRes.data.data : (contractsRes.data || []);
       const customersData = customersRes.data?.success ? customersRes.data.data : (customersRes.data || []);
-      const productsData = productsRes.data?.success ? productsRes.data.data : (productsRes.data || []);
+      const inventoryData = inventoryRes.data?.success ? inventoryRes.data.data : (inventoryRes.data || []);
       const employeesData = employeesRes.data?.success ? employeesRes.data.data : (employeesRes.data || []);
 
       console.log('Processed data:', { 
         contracts: contractsData.length, 
         customers: customersData.length, 
-        products: productsData.length, 
+        inventory: inventoryData.length, 
         employees: employeesData.length 
       });
 
       setContracts(contractsData);
       setCustomers(customersData);
-      setProducts(productsData);
+      setInventory(inventoryData);
       setEmployees(employeesData);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -357,7 +357,7 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
         <>
           {console.log('🔍 ContractsPage: Rendering ContractForm with props:', {
             customersCount: customers?.length || 0,
-            productsCount: products?.length || 0,
+            inventoryCount: inventory?.length || 0,
             employeesCount: employees?.length || 0,
             selectedBranch,
             currentBranch,
@@ -365,7 +365,7 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
           })}
           <ContractForm
             customers={customers}
-            products={products}
+            inventory={inventory}
             employees={employees}
             onSubmit={handleContractSubmit}
             selectedBranch={selectedBranch}

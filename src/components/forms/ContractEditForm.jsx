@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import { customersService } from '@/services/customersService';
-import { productsService } from '@/services/productsService';
+import { inventoryService } from '@/services/inventoryService';
 import { employeesService } from '@/services/employeesService';
 import { checkersService } from '@/services/checkersService';
 import { installmentsService } from '@/services/installmentsService';
@@ -158,8 +158,8 @@ const ContractEditForm = ({
   console.log('🔍 ContractEditForm rendered with props:', { contractId, selectedBranch });
   const [allCustomers, setAllCustomers] = useState([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
-  const [allProducts, setAllProducts] = useState([]);
-  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [allInventory, setAllInventory] = useState([]);
+  const [loadingInventory, setLoadingInventory] = useState(false);
   const [allEmployees, setAllEmployees] = useState([]);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
   const [allCheckers, setAllCheckers] = useState([]);
@@ -235,10 +235,30 @@ const ContractEditForm = ({
   useEffect(() => {
     console.log('🔍 contractForm state changed:', contractForm);
     console.log('🔍 contractForm.contractNumber:', contractForm.contractNumber);
+    console.log('🔍 contractForm.contractDate:', contractForm.contractDate);
+    console.log('🔍 contractForm.productId:', contractForm.productId);
     console.log('🔍 contractForm.customerDetails.name:', contractForm.customerDetails.name);
     console.log('🔍 contractForm.productDetails.name:', contractForm.productDetails.name);
     console.log('🔍 contractForm.totalAmount:', contractForm.totalAmount);
   }, [contractForm]);
+
+  // Auto-fill product details when productId changes
+  useEffect(() => {
+    if (contractForm.productId && allInventory.length > 0) {
+      const selectedInventory = allInventory.find(item => item.id === parseInt(contractForm.productId));
+      if (selectedInventory) {
+        console.log('🔍 Auto-filling product details for:', selectedInventory);
+        setContractForm(prev => ({
+          ...prev,
+          productDetails: {
+            ...prev.productDetails,
+            name: selectedInventory.product_name || '',
+            price: selectedInventory.cost_price ? selectedInventory.cost_price.toString() : ''
+          }
+        }));
+      }
+    }
+  }, [contractForm.productId, allInventory]);
 
   // Load contract data
   useEffect(() => {
@@ -280,7 +300,7 @@ const ContractEditForm = ({
           // Map contract data to form based on backend API structure
           const formData = {
             contractNumber: contract.contractNumber || '',
-            contractDate: contract.contractDate || contract.startDate || '',
+            contractDate: contract.contractDate ? contract.contractDate.split('T')[0] : (contract.startDate ? contract.startDate.split('T')[0] : ''),
             customerId: contract.customerId || '',
             customerDetails: {
               title: contract.customerDetails?.title || contract.customerTitle || 'นาย',
@@ -348,6 +368,10 @@ const ContractEditForm = ({
           console.log('🔍 Mapped customerDetails:', formData.customerDetails);
           console.log('🔍 Mapped productDetails:', formData.productDetails);
           console.log('🔍 Mapped plan:', formData.plan);
+          console.log('🔍 Contract productId:', contract.productId);
+          console.log('🔍 Form productId:', formData.productId);
+          console.log('🔍 Contract contractDate:', contract.contractDate);
+          console.log('🔍 Form contractDate:', formData.contractDate);
           console.log('🔍 Setting contractForm with:', formData);
           setContractForm(formData);
           console.log('✅ setContractForm called');
@@ -366,6 +390,35 @@ const ContractEditForm = ({
 
     loadContract();
   }, [contractId]);
+
+  // Debug: Log contractForm changes
+  useEffect(() => {
+    console.log('🔍 contractForm state changed:', contractForm);
+    console.log('🔍 contractForm.contractNumber:', contractForm.contractNumber);
+    console.log('🔍 contractForm.contractDate:', contractForm.contractDate);
+    console.log('🔍 contractForm.productId:', contractForm.productId);
+    console.log('🔍 contractForm.customerDetails.name:', contractForm.customerDetails.name);
+    console.log('🔍 contractForm.productDetails.name:', contractForm.productDetails.name);
+    console.log('🔍 contractForm.totalAmount:', contractForm.totalAmount);
+  }, [contractForm]);
+
+  // Auto-fill product details when productId changes
+  useEffect(() => {
+    if (contractForm.productId && allInventory.length > 0) {
+      const selectedInventory = allInventory.find(item => item.id === parseInt(contractForm.productId));
+      if (selectedInventory) {
+        console.log('🔍 Auto-filling product details for:', selectedInventory);
+        setContractForm(prev => ({
+          ...prev,
+          productDetails: {
+            ...prev.productDetails,
+            name: selectedInventory.product_name || '',
+            price: selectedInventory.cost_price ? selectedInventory.cost_price.toString() : ''
+          }
+        }));
+      }
+    }
+  }, [contractForm.productId, allInventory]);
 
   // Load customers from API
   useEffect(() => {
@@ -402,35 +455,35 @@ const ContractEditForm = ({
 
   // Load products from API
   useEffect(() => {
-    const loadProducts = async () => {
+    const loadInventory = async () => {
       if (!selectedBranch) return;
       
       try {
-        setLoadingProducts(true);
-        console.log('🔍 Loading products for branch:', selectedBranch);
-        const response = await productsService.getAll(selectedBranch);
+        setLoadingInventory(true);
+        console.log('🔍 Loading inventory for branch:', selectedBranch);
+        const response = await inventoryService.getAll({ branchId: selectedBranch });
         
-        console.log('🔍 Products response:', response);
+        console.log('🔍 Inventory response:', response);
         
-        let productsData = [];
+        let inventoryData = [];
         if (response.data?.success && Array.isArray(response.data.data)) {
-          productsData = response.data.data;
+          inventoryData = response.data.data;
         } else if (Array.isArray(response.data)) {
-          productsData = response.data;
+          inventoryData = response.data;
         }
         
-        console.log('🔍 Processed products data:', productsData);
-        setAllProducts(productsData);
+        console.log('🔍 Processed inventory data:', inventoryData);
+        setAllInventory(inventoryData);
       } catch (error) {
-        console.error('Error loading products:', error);
-        console.warn('⚠️ Products loading failed, continuing without products data');
-        setAllProducts([]);
+        console.error('Error loading inventory:', error);
+        console.warn('⚠️ Inventory loading failed, continuing without inventory data');
+        setAllInventory([]);
       } finally {
-        setLoadingProducts(false);
+        setLoadingInventory(false);
       }
     };
 
-    loadProducts();
+    loadInventory();
   }, [selectedBranch]);
 
   // Load employees from API
@@ -591,7 +644,7 @@ const ContractEditForm = ({
     }
 
     // Prepare data for API
-    const selectedProduct = allProducts.find(p => p.id === contractForm.productId);
+    const selectedProduct = allInventory.find(p => p.id === contractForm.productId);
     const selectedCollector = allCollectors.find(c => c.id === contractForm.collectorId);
     
     const contractData = {
@@ -760,8 +813,8 @@ const ContractEditForm = ({
               label="ชนิดสินค้า" 
               value={contractForm.productId} 
               onChange={(e) => handleSelectChange('productId', e.target.value)} 
-              options={allProducts} 
-              placeholder={loadingProducts ? "กำลังโหลดข้อมูล..." : "--พิมพ์ค้นหาสินค้า--"} 
+                              options={allInventory} 
+                              placeholder={loadingInventory ? "กำลังโหลดข้อมูล..." : "--พิมพ์ค้นหาสินค้า--"} 
               required
             />
             <InputField label="ราคารวม" value={contractForm.productDetails.price} onChange={(e) => handleDetailChange('productDetails', 'price', e.target.value)} placeholder="ราคารวม" type="number" />
