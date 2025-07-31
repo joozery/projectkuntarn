@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
+import Swal from 'sweetalert2';
 import { customersService } from '@/services/customersService';
 import { inventoryService } from '@/services/inventoryService';
 import { employeesService } from '@/services/employeesService';
 import { checkersService } from '@/services/checkersService';
 import { 
-  Calculator, 
   FileText, 
   User, 
   Shield, 
@@ -600,7 +600,7 @@ const ContractForm = ({
             ...prev.productDetails,
             name: inventory.product_name || '',
             description: inventory.remarks || '',
-            price: inventory.cost_price || '',
+            price: '', // ไม่ดึงราคามา ให้กรอกเอง
             category: inventory.product_code || '',
             model: inventory.product_code || '',
             serialNumber: inventory.sequence || ''
@@ -645,10 +645,42 @@ const ContractForm = ({
     console.log('🔍 Product ID type:', typeof contractForm.productId);
     
     if (!contractForm.customerId || !contractForm.productId || !contractForm.salespersonId || !contractForm.inspectorId || !contractForm.collectorId) {
-      toast({
-        title: "กรุณากรอกข้อมูลให้ครบถ้วน",
-        description: "ลูกค้า, สินค้า, พนักงานขาย, ผู้ตรวจสอบ และพนักงานเก็บเงินเป็นข้อมูลที่จำเป็น",
-        variant: "destructive"
+      Swal.fire({
+        icon: 'error',
+        title: 'กรุณากรอกข้อมูลให้ครบถ้วน',
+        text: 'ลูกค้า, สินค้า, พนักงานขาย, ผู้ตรวจสอบ และพนักงานเก็บเงินเป็นข้อมูลที่จำเป็น',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#7c3aed'
+      });
+      return;
+    }
+
+    // ตรวจสอบข้อมูลการผ่อนชำระ
+    if (!contractForm.plan.monthlyPayment || !contractForm.plan.months) {
+      Swal.fire({
+        icon: 'error',
+        title: 'กรุณากรอกข้อมูลการผ่อนชำระ',
+        text: 'ผ่อนต่อเดือนและจำนวนงวดเป็นข้อมูลที่จำเป็น',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#7c3aed'
+      });
+      return;
+    }
+
+    // ตรวจสอบว่ามีการคำนวณราคาขายจริงแล้ว
+    const downPayment = parseFloat(contractForm.plan.downPayment) || 0;
+    const monthlyPayment = parseFloat(contractForm.plan.monthlyPayment) || 0;
+    const months = parseInt(contractForm.plan.months) || 0;
+    const totalInstallment = monthlyPayment * months;
+    const totalAmount = downPayment + totalInstallment;
+
+    if (totalAmount <= 0) {
+      Swal.fire({
+        icon: 'error',
+        title: 'กรุณากรอกข้อมูลการผ่อนชำระให้ถูกต้อง',
+        text: 'ไม่สามารถคำนวณราคาขายจริงได้',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#7c3aed'
       });
       return;
     }
@@ -657,15 +689,12 @@ const ContractForm = ({
     const selectedInventory = allInventory.find(p => p.id === contractForm.productId);
     console.log('🔍 Selected inventory:', selectedInventory);
     console.log('🔍 All inventory:', allInventory);
+    console.log('🔍 ราคาต้นทุนจากสินค้า:', selectedInventory?.cost_price || 0);
     
     const selectedCustomer = allCustomers.find(c => c.id === contractForm.customerId);
     const selectedCollector = allCollectors.find(c => c.id === contractForm.collectorId);
     
-    // Calculate amounts
-    const totalAmount = parseFloat(contractForm.productDetails.price) || 0;
-    const downPayment = parseFloat(contractForm.plan.downPayment) || 0;
-    const monthlyPayment = parseFloat(contractForm.plan.monthlyPayment) || 0;
-    const months = parseInt(contractForm.plan.months) || 12;
+    // ราคาขายจริง = ดาวน์ + (ผ่อนต่อเดือน × จำนวนงวด)
     const installmentAmount = monthlyPayment;
     const remainingAmount = totalAmount - downPayment;
 
@@ -737,6 +766,9 @@ const ContractForm = ({
       productSerialNumber: contractForm.productDetails.serialNumber,
       // Additional product fields from form
       productName: contractForm.productDetails.name || selectedInventory?.product_name || '',
+      
+      // ราคาต้นทุน (ต้นทุนขาย) - ดึงจากราคาต้นทุนของสินค้าใน inventory
+      costPrice: selectedInventory?.cost_price || 0,
 
       // Payment plan
       downPayment: downPayment,
@@ -749,7 +781,43 @@ const ContractForm = ({
     };
 
     console.log('🔍 ContractForm handleSubmit - prepared contractData:', contractData);
-    onSubmit(contractData);
+    
+    // แสดง Swal confirmation ก่อนสร้างสัญญา
+    Swal.fire({
+      title: 'ยืนยันการสร้างสัญญา',
+      html: `
+        <div class="text-left">
+          <p><strong>ลูกค้า:</strong> ${selectedCustomer?.name || 'ไม่ระบุ'}</p>
+          <p><strong>สินค้า:</strong> ${selectedInventory?.product_name || 'ไม่ระบุ'}</p>
+          <p><strong>ราคาขายจริง:</strong> ${totalAmount.toLocaleString()} บาท</p>
+          <p><strong>เงินดาวน์:</strong> ${downPayment.toLocaleString()} บาท</p>
+          <p><strong>ผ่อนต่อเดือน:</strong> ${monthlyPayment.toLocaleString()} บาท</p>
+          <p><strong>จำนวนงวด:</strong> ${months} งวด</p>
+        </div>
+      `,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'สร้างสัญญา',
+      cancelButtonText: 'ยกเลิก',
+      confirmButtonColor: '#7c3aed',
+      cancelButtonColor: '#6b7280',
+      reverseButtons: true
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // แสดง loading
+        Swal.fire({
+          title: 'กำลังสร้างสัญญา...',
+          text: 'กรุณารอสักครู่',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+        
+        // เรียก onSubmit
+        onSubmit(contractData);
+      }
+    });
   };
 
   return (
@@ -870,7 +938,23 @@ const ContractForm = ({
                 placeholder={loadingInventory ? "กำลังโหลดข้อมูล..." : "--พิมพ์ค้นหาสินค้า--"} 
                 required
               />
-              <InputField label="ราคารวม" value={contractForm.productDetails.price} onChange={(e) => handleDetailChange('productDetails', 'price', e.target.value)} placeholder="ราคารวม" type="number" />
+              <InputField 
+                label="ราคาขายจริง" 
+                value={(() => {
+                  const downPayment = parseFloat(contractForm.plan.downPayment) || 0;
+                  const monthlyPayment = parseFloat(contractForm.plan.monthlyPayment) || 0;
+                  const months = parseInt(contractForm.plan.months) || 0;
+                  const totalInstallment = monthlyPayment * months;
+                  const grandTotal = downPayment + totalInstallment;
+                  return grandTotal > 0 ? grandTotal.toString() : '';
+                })()} 
+                onChange={(e) => handleDetailChange('productDetails', 'price', e.target.value)} 
+                placeholder="คำนวณอัตโนมัติ" 
+                type="number" 
+                required 
+                disabled
+              />
+
               <InputField label="รุ่น" value={contractForm.productDetails.model} onChange={(e) => handleDetailChange('productDetails', 'model', e.target.value)} placeholder="รุ่น"/>
               <InputField label="S/N" value={contractForm.productDetails.serialNumber} onChange={(e) => handleDetailChange('productDetails', 'serialNumber', e.target.value)} placeholder="Serial Number"/>
               <InputField label="ดาวน์" value={contractForm.plan.downPayment} onChange={(e) => handleDetailChange('plan', 'downPayment', e.target.value)} placeholder="เงินดาวน์" type="number"/>

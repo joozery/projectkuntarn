@@ -133,26 +133,49 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
       setContracts(prev => [newContract, ...prev]);
       setShowForm(false);
       
-      // Show success message
-      toast({
-        title: "สำเร็จ",
-        description: "สร้างสัญญาเรียบร้อยแล้ว",
+      // ปิด loading Swal
+      Swal.close();
+      
+      // Show success message with Swal
+      Swal.fire({
+        icon: 'success',
+        title: 'สร้างสัญญาสำเร็จ!',
+        html: `
+          <div class="text-left">
+            <p><strong>เลขสัญญา:</strong> ${newContract.contractNumber || 'ไม่ระบุ'}</p>
+            <p><strong>ลูกค้า:</strong> ${newContract.customerName || 'ไม่ระบุ'}</p>
+            <p><strong>สินค้า:</strong> ${newContract.productName || 'ไม่ระบุ'}</p>
+            <p><strong>ราคารวม:</strong> ${newContract.totalAmount?.toLocaleString() || '0'} บาท</p>
+            <p><strong>วันที่:</strong> ${new Date(newContract.contractDate).toLocaleDateString('th-TH')}</p>
+          </div>
+        `,
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#7c3aed'
       });
       
       // Show warning if contract number was changed
       if (response.warning) {
-        toast({
-          title: "แจ้งเตือน",
-          description: response.warning,
-          variant: "default"
+        Swal.fire({
+          icon: 'warning',
+          title: 'แจ้งเตือน',
+          text: response.warning,
+          confirmButtonText: 'ตกลง',
+          confirmButtonColor: '#7c3aed'
         });
       }
     } catch (error) {
       console.error('Error creating contract:', error);
-      toast({
-        title: "เกิดข้อผิดพลาด",
-        description: "ไม่สามารถสร้างสัญญาได้",
-        variant: "destructive"
+      
+      // ปิด loading Swal
+      Swal.close();
+      
+      // Show error message with Swal
+      Swal.fire({
+        icon: 'error',
+        title: 'เกิดข้อผิดพลาด',
+        text: 'ไม่สามารถสร้างสัญญาได้ กรุณาลองใหม่อีกครั้ง',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#7c3aed'
       });
     } finally {
       setSubmitting(false);
@@ -162,9 +185,12 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
   const printContract = (contract) => {
     // Implement print functionality
     console.log('Printing contract:', contract);
-    toast({
-      title: "พิมพ์สัญญา",
-      description: "ฟังก์ชันพิมพ์จะถูกเพิ่มในภายหลัง",
+    Swal.fire({
+      icon: 'info',
+      title: 'พิมพ์สัญญา',
+      text: 'ฟังก์ชันพิมพ์จะถูกเพิ่มในภายหลัง',
+      confirmButtonText: 'ตกลง',
+      confirmButtonColor: '#7c3aed'
     });
   };
 
@@ -260,9 +286,21 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
     ));
     setShowEditForm(false);
     setEditingContractId(null);
-    toast({
-      title: "สำเร็จ",
-      description: "แก้ไขสัญญาเรียบร้อยแล้ว",
+    
+    // Show success message with Swal
+    Swal.fire({
+      icon: 'success',
+      title: 'แก้ไขสัญญาสำเร็จ!',
+      html: `
+        <div class="text-left">
+          <p><strong>เลขสัญญา:</strong> ${updatedContract.contractNumber || 'ไม่ระบุ'}</p>
+          <p><strong>ลูกค้า:</strong> ${updatedContract.customerName || 'ไม่ระบุ'}</p>
+          <p><strong>สินค้า:</strong> ${updatedContract.productName || 'ไม่ระบุ'}</p>
+          <p><strong>ราคารวม:</strong> ${updatedContract.totalAmount?.toLocaleString() || '0'} บาท</p>
+        </div>
+      `,
+      confirmButtonText: 'ตกลง',
+      confirmButtonColor: '#7c3aed'
     });
   };
 

@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
-import { Plus, Package, DollarSign, FileText, Tag, Hash, FileSignature, Calendar } from 'lucide-react';
+import { Plus, Package, DollarSign, FileText, Tag, Hash, FileSignature, Calendar, Store } from 'lucide-react';
 
 const ProductForm = ({ onAddProduct, submitting = false, initialData = null, contracts = [] }) => {
   const [formData, setFormData] = useState({
     productCode: initialData?.productCode || '',
     productName: initialData?.productName || '',
+    shopName: initialData?.shopName || '',
     contract: initialData?.contract || '',
     costPrice: initialData?.costPrice || '',
     receiveDate: initialData?.receiveDate || '',
@@ -26,6 +27,7 @@ const ProductForm = ({ onAddProduct, submitting = false, initialData = null, con
       setFormData({
         productCode: initialData.productCode || '',
         productName: initialData.productName || '',
+        shopName: initialData.shopName || '',
         contract: initialData.contract || '',
         costPrice: costPrice,
         receiveDate: initialData.receiveDate || '',
@@ -64,6 +66,7 @@ const ProductForm = ({ onAddProduct, submitting = false, initialData = null, con
       name: formData.productName,
       price: costPrice,
       code: formData.productCode,
+      shopName: formData.shopName,
       contract: formData.contract,
       receiveDate: formData.receiveDate,
       remarks: formData.remarks
@@ -74,6 +77,7 @@ const ProductForm = ({ onAddProduct, submitting = false, initialData = null, con
       setFormData({
         productCode: '',
         productName: '',
+        shopName: '',
         contract: '',
         costPrice: '',
         receiveDate: '',
@@ -139,6 +143,22 @@ const ProductForm = ({ onAddProduct, submitting = false, initialData = null, con
               placeholder="เช่น เครื่องซักผ้า 11 กิโล"
               className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 bg-white/80 backdrop-blur-sm text-sm"
               required
+            />
+          </div>
+
+          {/* Shop Name */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <Store className="w-4 h-4" />
+              ชื่อร้านค้า
+            </label>
+            <input
+              type="text"
+              name="shopName"
+              value={formData.shopName}
+              onChange={handleChange}
+              placeholder="เช่น ร้านค้า A, ร้านค้า B"
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 bg-white/80 backdrop-blur-sm text-sm"
             />
           </div>
 

@@ -82,6 +82,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
   const filteredProducts = products.filter(product =>
     (product.display_name && product.display_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (product.product_code && product.product_code.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (product.shop_name && product.shop_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (product.contract_number && product.contract_number.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
@@ -100,6 +101,45 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
     setCurrentPage(pageNumber);
   };
 
+  const handleContractClick = (contractNumber) => {
+    // แสดง Swal confirmation ก่อนไปหน้าของเช็คเกอร์
+    Swal.fire({
+      title: 'ไปดูตารางผ่อน',
+      html: `
+        <div class="text-left">
+          <p>คุณต้องการไปดูตารางผ่อนของสัญญา</p>
+          <p><strong>${contractNumber}</strong> ในหน้าของเช็คเกอร์หรือไม่?</p>
+        </div>
+      `,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'ไปดู',
+      cancelButtonText: 'ยกเลิก',
+      confirmButtonColor: '#7c3aed',
+      cancelButtonColor: '#6b7280',
+      reverseButtons: true
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // เก็บข้อมูลสัญญาใน localStorage เพื่อส่งไปยังหน้าของเช็คเกอร์
+        localStorage.setItem('selectedContractForChecker', contractNumber);
+        
+        // แสดง Swal แจ้งให้ไปหน้าของเช็คเกอร์
+        Swal.fire({
+          icon: 'info',
+          title: 'ไปหน้าของเช็คเกอร์',
+          html: `
+            <div class="text-left">
+              <p>กรุณาไปที่ <strong>เมนู "รายงานค่างวด"</strong> ในหน้าของเช็คเกอร์</p>
+              <p>ระบบจะแสดงตารางผ่อนของสัญญา <strong>${contractNumber}</strong> ให้อัตโนมัติ</p>
+            </div>
+          `,
+          confirmButtonText: 'เข้าใจแล้ว',
+          confirmButtonColor: '#7c3aed'
+        });
+      }
+    });
+  };
+
   const addProduct = async (productData) => {
     try {
       setSubmitting(true);
@@ -107,6 +147,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
       const inventoryData = {
         product_name: productData.productName,
         product_code: productData.productCode,
+        shop_name: productData.shopName,
         contract_number: productData.contract,
         cost_price: parseFloat(productData.costPrice?.replace(/,/g, '')),
         receive_date: productData.receiveDate,
@@ -244,6 +285,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
       const inventoryData = {
         product_name: updatedData.productName || editingProduct.product_name,
         product_code: updatedData.productCode || editingProduct.product_code,
+        shop_name: updatedData.shopName || editingProduct.shop_name,
         contract_number: updatedData.contract || editingProduct.contract_number,
         cost_price: parseFloat(updatedData.costPrice?.replace(/,/g, '')) || editingProduct.cost_price,
         receive_date: updatedData.receiveDate || editingProduct.receive_date,
@@ -370,6 +412,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
               initialData={{
                 productCode: editingProduct.product_code || '',
                 productName: editingProduct.display_name || editingProduct.product_name || '',
+                shopName: editingProduct.shop_name || '',
                 contract: editingProduct.contract_number || '',
                 costPrice: editingProduct.cost_price ? editingProduct.cost_price.toString() : '',
                 receiveDate: editingProduct.receive_date ? editingProduct.receive_date.split('T')[0] : '',
@@ -398,7 +441,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
-              placeholder="ค้นหาสินค้า รหัส หรือสัญญา..."
+              placeholder="ค้นหาสินค้า รหัส ร้านค้า หรือสัญญา..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -421,6 +464,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ว.ด.ป./รับ</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">รหัสสินค้า</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สินค้า</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ร้านค้า</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สัญญา</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ราคาต้นทุน</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ว.ด.ป./ขาย</th>
@@ -449,9 +493,18 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                   <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate" title={product.display_name}>
                     {product.display_name}
                   </td>
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                    {product.shop_name || '-'}
+                  </td>
                   <td className="px-4 py-3 text-sm">
                     {product.contract_number ? (
-                      <span className="text-red-600 font-medium">{product.contract_number}</span>
+                      <button
+                        onClick={() => handleContractClick(product.contract_number)}
+                        className="text-red-600 font-medium hover:text-red-800 hover:underline cursor-pointer transition-colors"
+                        title="คลิกเพื่อดูตารางผ่อน"
+                      >
+                        {product.contract_number}
+                      </button>
                     ) : (
                       '-'
                     )}
@@ -463,7 +516,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                     {product.sell_date ? new Date(product.sell_date).toLocaleDateString('th-TH') : '-'}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
-                    {product.selling_cost ? product.selling_cost.toLocaleString() : '-'}
+                    {product.cost_price ? product.cost_price.toLocaleString() : '-'}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">{product.remaining_quantity1}</td>
                   <td className="px-4 py-3 text-sm text-gray-900">{product.received_quantity}</td>

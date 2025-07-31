@@ -21,22 +21,27 @@ import {
   CheckCircle,
   AlertCircle,
   XCircle,
-  Loader2
+  Loader2,
+  Printer
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { paymentScheduleService } from '@/services/paymentScheduleService';
+import api from '@/lib/api';
 
 const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
   const [paymentDate, setPaymentDate] = useState('');
   const [receiptNumber, setReceiptNumber] = useState('');
   const [amount, setAmount] = useState('');
   const [employee, setEmployee] = useState('');
+  const [collectorId, setCollectorId] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('ปกติ');
   const [discountStatus, setDiscountStatus] = useState('ไม่มีส่วนลด');
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [installments, setInstallments] = useState([]);
   const [customerInstallment, setCustomerInstallment] = useState(null);
+  const [collectors, setCollectors] = useState([]);
+  const [loadingCollectors, setLoadingCollectors] = useState(false);
 
   // Use customer data from props or fallback to mock data
   const customerInfo = customerData || customer || {
@@ -63,10 +68,46 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
     status: 'completed'
   };
 
+  // โหลดข้อมูลพนักงานเก็บเงิน
+  const loadCollectors = async () => {
+    try {
+      setLoadingCollectors(true);
+      const response = await api.get('/employees');
+      
+      let collectorsData = [];
+      if (response.data?.success) {
+        collectorsData = response.data.data || [];
+      } else if (Array.isArray(response.data)) {
+        collectorsData = response.data;
+      }
+      
+      // กรองเฉพาะพนักงานที่มีตำแหน่งเป็น collector หรือ เก็บเงิน
+      const filteredCollectors = collectorsData.filter(employee => 
+        employee.position && (
+          employee.position.toLowerCase().includes('collector') ||
+          employee.position.toLowerCase().includes('เก็บเงิน') ||
+          employee.position.toLowerCase().includes('พนักงานเก็บเงิน')
+        )
+      );
+      
+      setCollectors(filteredCollectors);
+    } catch (error) {
+      console.error('Error loading collectors:', error);
+      toast({
+        title: 'เกิดข้อผิดพลาด',
+        description: 'ไม่สามารถโหลดข้อมูลพนักงานเก็บเงินได้',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingCollectors(false);
+    }
+  };
+
   // Load customer installment data
   useEffect(() => {
     if (customerInfo.id) {
       loadCustomerData();
+      loadCollectors();
     }
   }, [customerInfo.id]);
 
@@ -320,7 +361,8 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
           amount: parseFloat(amount),
           payment_date: paymentDate,
           status: 'paid',
-          notes: `ใบเสร็จ: ${receiptNumber}, สถานะ: ${paymentStatus}, ส่วนลด: ${discountStatus}`
+          notes: `ใบเสร็จ: ${receiptNumber}, สถานะ: ${paymentStatus}, ส่วนลด: ${discountStatus}`,
+          collector_id: collectorId || null
         };
 
         console.log('🔍 Updating existing payment:', {
@@ -328,7 +370,8 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
           paymentId: matchingInstallment.id,
           updateData,
           paymentDate: paymentDate,
-          paymentDateType: typeof paymentDate
+          paymentDateType: typeof paymentDate,
+          collectorId: collectorId
         });
 
         await paymentScheduleService.updatePayment(customerInstallment.id, matchingInstallment.id, updateData);
@@ -339,7 +382,8 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
           payment_date: paymentDate,
           due_date: paymentDate,
           status: 'paid',
-          notes: `ใบเสร็จ: ${receiptNumber}, สถานะ: ${paymentStatus}, ส่วนลด: ${discountStatus}`
+          notes: `ใบเสร็จ: ${receiptNumber}, สถานะ: ${paymentStatus}, ส่วนลด: ${discountStatus}`,
+          collector_id: collectorId || null
         };
 
         await paymentScheduleService.createPayment(customerInstallment.id, paymentData);
@@ -353,6 +397,7 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
       setReceiptNumber('');
       setAmount('');
       setEmployee('');
+      setCollectorId('');
       setPaymentStatus('ปกติ');
       setDiscountStatus('ไม่มีส่วนลด');
       
@@ -407,6 +452,285 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
         });
       }
     }
+  };
+
+  // ฟังก์ชันปริ้นเอกสาร
+  const handlePrintDocument = () => {
+    // สร้างเนื้อหาสำหรับปริ้น
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>ตารางผ่อนชำระ - ${mappedCustomerInfo.name}</title>
+        <style>
+          body {
+            font-family: 'Sarabun', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+          }
+          .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: bold;
+          }
+          .header p {
+            margin: 5px 0;
+            font-size: 16px;
+          }
+          .customer-info {
+            margin-bottom: 30px;
+          }
+          .customer-info h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+          }
+          .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+          }
+          .info-section {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+          }
+          .info-section h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #555;
+          }
+          .info-item {
+            margin-bottom: 8px;
+          }
+          .info-label {
+            font-weight: bold;
+            color: #333;
+          }
+          .contract-details {
+            margin-bottom: 30px;
+          }
+          .contract-details h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+          }
+          .payment-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+          }
+          .payment-table th,
+          .payment-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+          }
+          .payment-table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+            color: #333;
+          }
+          .payment-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+          }
+          .summary {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f0f8ff;
+            border-radius: 5px;
+          }
+          .summary h2 {
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            color: #333;
+          }
+          .summary-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+          }
+          .summary-label {
+            font-weight: bold;
+            color: #333;
+          }
+          .summary-value {
+            color: #555;
+          }
+          .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+          }
+          @media print {
+            body { margin: 0; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>ตารางผ่อนชำระ</h1>
+          <p>บริษัท กุนทาร จำกัด</p>
+          <p>วันที่พิมพ์: ${new Date().toLocaleDateString('th-TH')}</p>
+        </div>
+
+        <div class="customer-info">
+          <h2>ข้อมูลลูกค้า</h2>
+          <div class="info-grid">
+            <div class="info-section">
+              <h3>ข้อมูลลูกค้า</h3>
+              <div class="info-item">
+                <span class="info-label">ชื่อ-สกุล:</span> ${mappedCustomerInfo.name}
+              </div>
+              <div class="info-item">
+                <span class="info-label">ชื่อเล่น:</span> ${mappedCustomerInfo.nickname}
+              </div>
+              <div class="info-item">
+                <span class="info-label">เบอร์โทร:</span> ${mappedCustomerInfo.phone}
+              </div>
+              <div class="info-item">
+                <span class="info-label">ที่อยู่:</span> ${mappedCustomerInfo.address}
+              </div>
+            </div>
+            <div class="info-section">
+              <h3>ข้อมูลผู้ค้ำประกัน</h3>
+              <div class="info-item">
+                <span class="info-label">ชื่อ-สกุล:</span> ${mappedCustomerInfo.guarantorName}
+              </div>
+              <div class="info-item">
+                <span class="info-label">ชื่อเล่น:</span> ${mappedCustomerInfo.guarantorNickname || '-'}
+              </div>
+              <div class="info-item">
+                <span class="info-label">เบอร์โทร:</span> ${mappedCustomerInfo.guarantorPhone || '-'}
+              </div>
+              <div class="info-item">
+                <span class="info-label">ที่อยู่:</span> ${mappedCustomerInfo.guarantorAddress || '-'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="contract-details">
+          <h2>รายละเอียดสัญญา</h2>
+          <div class="info-grid">
+            <div class="info-section">
+              <div class="info-item">
+                <span class="info-label">เลขที่สัญญา:</span> ${mappedCustomerInfo.contractNumber || customerInstallment?.contractNumber || 'N/A'}
+              </div>
+              <div class="info-item">
+                <span class="info-label">สินค้า:</span> ${mappedCustomerInfo.productType}
+              </div>
+              <div class="info-item">
+                <span class="info-label">ราคารวม:</span> ฿${mappedCustomerInfo.totalPrice?.toLocaleString() || 'N/A'}
+              </div>
+              <div class="info-item">
+                <span class="info-label">เงินดาวน์:</span> ฿${mappedCustomerInfo.downPayment?.toLocaleString() || 'N/A'}
+              </div>
+            </div>
+            <div class="info-section">
+              <div class="info-item">
+                <span class="info-label">งวดต่อเดือน:</span> ฿${mappedCustomerInfo.installmentAmount?.toLocaleString() || 'N/A'}
+              </div>
+              <div class="info-item">
+                <span class="info-label">จำนวนงวด:</span> ${mappedCustomerInfo.months || 'N/A'} งวด
+              </div>
+              <div class="info-item">
+                <span class="info-label">วันที่เริ่ม:</span> ${formatDate(customerInstallment?.startDate) || 'N/A'}
+              </div>
+              <div class="info-item">
+                <span class="info-label">วันที่ครบกำหนด:</span> ${formatDate(customerInstallment?.endDate) || 'N/A'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h2>รายการชำระเงิน</h2>
+        <table class="payment-table">
+          <thead>
+            <tr>
+              <th>งวดที่</th>
+              <th>วันที่ชำระ</th>
+              <th>เลขที่ใบเสร็จ</th>
+              <th>จำนวนเงิน</th>
+              <th>ยอดคงเหลือ</th>
+              <th>สถานะ</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${paidInstallments.map((payment, index) => `
+              <tr>
+                <td>${index + 1}</td>
+                <td>${formatDate(payment.paymentDate)}</td>
+                <td>${payment.notes?.includes('ใบเสร็จ:') ? payment.notes.split('ใบเสร็จ:')[1]?.split(',')[0]?.trim() || '-' : '-'}</td>
+                <td>฿${parseFloat(payment.amount || 0).toLocaleString()}</td>
+                <td>฿${calculateRemainingBalance(index).toLocaleString()}</td>
+                <td>ชำระแล้ว</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="summary">
+          <h2>สรุปข้อมูล</h2>
+          <div class="summary-item">
+            <span class="summary-label">จำนวนงวดที่ชำระแล้ว:</span>
+            <span class="summary-value">${paidInstallments.length} งวด</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">ยอดรวมที่ชำระแล้ว:</span>
+            <span class="summary-value">฿${paidInstallments.reduce((sum, payment) => sum + parseFloat(payment.amount || 0), 0).toLocaleString()}</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">ยอดคงเหลือ:</span>
+            <span class="summary-value">฿${Math.max(0, mappedCustomerInfo.totalPrice - paidInstallments.reduce((sum, payment) => sum + parseFloat(payment.amount || 0), 0)).toLocaleString()}</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">จำนวนงวดที่เหลือ:</span>
+            <span class="summary-value">${Math.max(0, (mappedCustomerInfo.months || 0) - paidInstallments.length)} งวด</span>
+          </div>
+        </div>
+
+        <div class="footer">
+          <p>เอกสารนี้พิมพ์จากระบบจัดการการผ่อนชำระ</p>
+          <p>วันที่พิมพ์: ${new Date().toLocaleDateString('th-TH', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })}</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // สร้างหน้าต่างใหม่สำหรับปริ้น
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    
+    // รอให้เนื้อหาโหลดเสร็จแล้วปริ้น
+    printWindow.onload = () => {
+      printWindow.print();
+      printWindow.close();
+    };
   };
 
   const getStatusBadge = (status) => {
@@ -464,6 +788,14 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
                 </div>
               </div>
               <div className="flex items-center space-x-4">
+                <Button
+                  onClick={handlePrintDocument}
+                  variant="outline"
+                  className="bg-white hover:bg-gray-50 border-gray-200 text-gray-700"
+                >
+                  <Printer className="w-4 h-4 mr-2" />
+                  ปริ้นเอกสาร
+                </Button>
                 {getStatusBadge(mappedCustomerInfo.status)}
               </div>
             </div>
@@ -585,7 +917,7 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
                 </div>
                 
                 <div className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">วันที่ชำระ</label>
                       <input
@@ -615,6 +947,28 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
                         onChange={(e) => setAmount(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
                       />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">พนักงานเก็บเงิน</label>
+                      {loadingCollectors ? (
+                        <div className="flex items-center px-3 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          โหลด...
+                        </div>
+                      ) : (
+                        <select
+                          value={collectorId}
+                          onChange={(e) => setCollectorId(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
+                        >
+                          <option value="">เลือกพนักงาน</option>
+                          {collectors.map((collector) => (
+                            <option key={collector.id} value={collector.id}>
+                              {collector.name} {collector.surname} ({collector.position})
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </div>
                     <div className="flex items-end">
                       <Button

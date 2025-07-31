@@ -25,17 +25,15 @@ const AdminSidebar = ({ activeTab, setActiveTab, collapsed, setCollapsed, curren
   const menuItems = [
     { id: 'dashboard', label: 'แดชบอร์ด', icon: LayoutDashboard },
     { id: 'branches', label: 'จัดการสาขา', icon: Building2 },
-    { id: 'analytics', label: 'รายงาน', icon: BarChart3 },
     { id: 'products', label: 'จัดการสินค้า', icon: Package },
     { id: 'contracts', label: 'รายการสัญญา', icon: ClipboardList },
-    { id: 'payments', label: 'ตารางชำระ', icon: Calendar },
+    { id: 'payments', label: 'ค่างวด', icon: Calendar },
     { id: 'returns', label: 'รับคืนสินค้า', icon: RotateCcw },
     { id: 'customers', label: 'ลูกค้า', icon: Users },
     { id: 'employees', label: 'พนักงานขาย', icon: UserCheck },
     { id: 'salespeople', label: 'พนักงานเก็บเงิน', icon: Users },
     { id: 'checkers', label: 'เช็คเกอร์', icon: Shield },
     { id: 'sales-index', label: 'สารบัญการขาย', icon: TrendingUp },
-    { id: 'reports', label: 'รายงาน', icon: FileText },
     { id: 'settings', label: 'ตั้งค่า', icon: Settings }
   ];
 
@@ -93,7 +91,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, collapsed, setCollapsed, curren
           </div>
         )}
 
-        <nav className="flex-1 p-2 space-y-1">
+        <nav className="flex-1 p-2 space-y-1 overflow-y-auto sidebar-scrollbar">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;

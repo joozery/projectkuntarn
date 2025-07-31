@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
@@ -11,9 +11,11 @@ import {
   Filter,
   CreditCard,
   Eye,
-  Edit
+  Edit,
+  Loader2
 } from 'lucide-react';
 import { installmentsService } from '@/services/installmentsService';
+import api from '@/lib/api';
 
 const PaymentScheduleTable = ({ installmentId, selectedBranch }) => {
   const [payments, setPayments] = useState([]);
@@ -21,12 +23,50 @@ const PaymentScheduleTable = ({ installmentId, selectedBranch }) => {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
   const [editingPayment, setEditingPayment] = useState(null);
+  const [collectors, setCollectors] = useState([]);
+  const [loadingCollectors, setLoadingCollectors] = useState(false);
+
+  // โหลดข้อมูลพนักงานเก็บเงิน
+  const loadCollectors = useCallback(async () => {
+    try {
+      setLoadingCollectors(true);
+      const response = await api.get('/employees');
+      
+      let collectorsData = [];
+      if (response.data?.success) {
+        collectorsData = response.data.data || [];
+      } else if (Array.isArray(response.data)) {
+        collectorsData = response.data;
+      }
+      
+      // กรองเฉพาะพนักงานที่มีตำแหน่งเป็น collector หรือ เก็บเงิน
+      const filteredCollectors = collectorsData.filter(employee => 
+        employee.position && (
+          employee.position.toLowerCase().includes('collector') ||
+          employee.position.toLowerCase().includes('เก็บเงิน') ||
+          employee.position.toLowerCase().includes('พนักงานเก็บเงิน')
+        )
+      );
+      
+      setCollectors(filteredCollectors);
+    } catch (error) {
+      console.error('Error loading collectors:', error);
+      toast({
+        title: 'เกิดข้อผิดพลาด',
+        description: 'ไม่สามารถโหลดข้อมูลพนักงานเก็บเงินได้',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingCollectors(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (installmentId) {
       loadPayments();
+      loadCollectors();
     }
-  }, [installmentId, statusFilter]);
+  }, [installmentId, statusFilter, loadCollectors]);
 
   const loadPayments = async () => {
     try {
@@ -50,6 +90,34 @@ const PaymentScheduleTable = ({ installmentId, selectedBranch }) => {
       setLoading(false);
     }
   };
+
+  // ฟังก์ชันเปลี่ยนพนักงานเก็บเงิน
+  const handleCollectorChange = useCallback(async (paymentId, collectorId) => {
+    try {
+      const response = await api.put(`/payments/${paymentId}/collector`, {
+        collectorId: collectorId
+      });
+      
+      if (response.data?.success) {
+        toast({
+          title: 'สำเร็จ',
+          description: 'เปลี่ยนพนักงานเก็บเงินเรียบร้อยแล้ว',
+        });
+        
+        // รีเฟรชข้อมูล
+        loadPayments();
+      } else {
+        throw new Error(response.data?.message || 'เกิดข้อผิดพลาด');
+      }
+    } catch (error) {
+      console.error('Error updating collector:', error);
+      toast({
+        title: 'เกิดข้อผิดพลาด',
+        description: 'ไม่สามารถเปลี่ยนพนักงานเก็บเงินได้',
+        variant: 'destructive',
+      });
+    }
+  }, [loadPayments]);
 
   const handlePaymentUpdate = async (paymentId, status, paymentDate = null, notes = '') => {
     try {
@@ -217,6 +285,16 @@ const PaymentScheduleTable = ({ installmentId, selectedBranch }) => {
                   หมายเหตุ
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {loadingCollectors ? (
+                    <div className="flex items-center">
+                      <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                      โหลด...
+                    </div>
+                  ) : (
+                    'พนักงานเก็บเงิน'
+                  )}
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   จัดการ
                 </th>
               </tr>
@@ -244,6 +322,35 @@ const PaymentScheduleTable = ({ installmentId, selectedBranch }) => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {payment.notes || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {loadingCollectors ? (
+                      <div className="flex items-center">
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        โหลด...
+                      </div>
+                    ) : (
+                      <select
+                        value={payment.collectorId || ''}
+                        onChange={(e) => handleCollectorChange(payment.id, e.target.value)}
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="">เลือกพนักงาน</option>
+                        {collectors.map((collector) => (
+                          <option key={collector.id} value={collector.id}>
+                            {collector.name} {collector.surname} ({collector.position})
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {payment.collectorId && !loadingCollectors && (
+                      <div className="mt-1 text-xs text-gray-500">
+                        {(() => {
+                          const selectedCollector = collectors.find(c => c.id === payment.collectorId);
+                          return selectedCollector ? `${selectedCollector.name} ${selectedCollector.surname}` : 'ไม่พบข้อมูล';
+                        })()}
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     {editingPayment === payment.id ? (

@@ -8,6 +8,7 @@ import CheckersPage from '@/components/pages/CheckersPage';
 import CheckerInstallmentReport from '@/components/pages/CheckerInstallmentReport';
 import SalesIndexPage from '@/components/pages/SalesIndexPage';
 import PaymentSchedulePage from '@/components/pages/PaymentSchedulePage';
+import InstallmentIndexPage from '@/components/pages/InstallmentIndexPage';
 
 import ContractsPage from '@/components/pages/ContractsPage';
 import PaymentsPage from '@/components/pages/PaymentsPage';
@@ -106,7 +107,7 @@ const AdminContent = ({
         );
       case 'payments':
         return (
-          <PaymentsPage 
+          <InstallmentIndexPage 
             selectedBranch={selectedBranch}
             currentBranch={currentBranch}
           />

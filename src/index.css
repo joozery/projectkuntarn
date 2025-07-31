@@ -85,4 +85,28 @@
   .branch-selector {
     @apply bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-lg px-4 py-2 shadow-lg hover:shadow-xl transition-all duration-300;
   }
+
+  /* Sidebar Scrollbar Styles */
+  .sidebar-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #d1d5db #f3f4f6;
+  }
+
+  .sidebar-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .sidebar-scrollbar::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border-radius: 3px;
+  }
+
+  .sidebar-scrollbar::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 3px;
+  }
+
+  .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+  }
 }
