@@ -39,16 +39,6 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
     }
   }, [selectedBranch]);
 
-  // Force refresh when component mounts
-  useEffect(() => {
-    if (selectedBranch) {
-      const timer = setTimeout(() => {
-        loadData();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, []);
-
   const loadData = async () => {
     try {
       setLoading(true);
@@ -74,10 +64,22 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
       console.log('API responses:', { contractsRes, customersRes, inventoryRes, employeesRes });
 
       // Handle different response formats
-      const contractsData = contractsRes.data?.success ? contractsRes.data.data : (contractsRes.data || []);
+      let contractsData = contractsRes.data?.success ? contractsRes.data.data : (contractsRes.data || []);
       const customersData = customersRes.data?.success ? customersRes.data.data : (customersRes.data || []);
       const inventoryData = inventoryRes.data?.success ? inventoryRes.data.data : (inventoryRes.data || []);
       const employeesData = employeesRes.data?.success ? employeesRes.data.data : (employeesRes.data || []);
+
+      // ลบข้อมูลสัญญาซ้ำกัน
+      const originalLength = contractsData.length;
+      contractsData = contractsData.filter((contract, index, self) => 
+        index === self.findIndex(c => c.id === contract.id)
+      );
+      
+      if (originalLength !== contractsData.length) {
+        console.log('🔍 Removed duplicate contracts:', originalLength - contractsData.length);
+        console.log('🔍 Original contracts:', originalLength);
+        console.log('🔍 Unique contracts:', contractsData.length);
+      }
 
       console.log('Processed data:', { 
         contracts: contractsData.length, 
@@ -269,7 +271,12 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
     setEditingContractId(null);
   };
 
-  const filteredContracts = contracts.filter(contract => {
+  // ลบข้อมูลซ้ำกันก่อนกรอง
+  const uniqueContracts = contracts.filter((contract, index, self) => 
+    index === self.findIndex(c => c.id === contract.id)
+  );
+
+  const filteredContracts = uniqueContracts.filter(contract => {
     const matchesSearch = contract.contractNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          contract.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          contract.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -315,6 +322,11 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <ClipboardList className="w-4 h-4" />
             <span>สัญญาทั้งหมด: {filteredContracts.length} สัญญา</span>
+            {contracts.length !== uniqueContracts.length && (
+              <span className="text-orange-600">
+                (กรองแล้วจาก {contracts.length} สัญญา)
+              </span>
+            )}
           </div>
           <Button 
             onClick={() => {

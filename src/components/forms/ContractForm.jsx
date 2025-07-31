@@ -639,6 +639,10 @@ const ContractForm = ({
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log('🔍 ContractForm handleSubmit - contractForm:', contractForm);
+    console.log('🔍 Product ID in form:', contractForm.productId);
+    console.log('🔍 Product ID type:', typeof contractForm.productId);
+    console.log('🔍 Product ID in form:', contractForm.productId);
+    console.log('🔍 Product ID type:', typeof contractForm.productId);
     
     if (!contractForm.customerId || !contractForm.productId || !contractForm.salespersonId || !contractForm.inspectorId || !contractForm.collectorId) {
       toast({
@@ -651,6 +655,9 @@ const ContractForm = ({
 
     // Prepare data for API
     const selectedInventory = allInventory.find(p => p.id === contractForm.productId);
+    console.log('🔍 Selected inventory:', selectedInventory);
+    console.log('🔍 All inventory:', allInventory);
+    
     const selectedCustomer = allCustomers.find(c => c.id === contractForm.customerId);
     const selectedCollector = allCollectors.find(c => c.id === contractForm.collectorId);
     
@@ -666,7 +673,7 @@ const ContractForm = ({
     const startDate = new Date(contractForm.contractDate);
     const endDate = new Date(startDate);
     endDate.setMonth(endDate.getMonth() + months);
-
+    
     const contractData = {
       // Contract basic info
       contractNumber: contractForm.contractNumber || undefined,
@@ -852,7 +859,14 @@ const ContractForm = ({
                 label="ชนิดสินค้า" 
                 value={contractForm.productId} 
                 onChange={(e) => handleSelectChange('productId', e.target.value)} 
-                options={allInventory} 
+                options={allInventory
+                  .filter(item => item.status === 'active' && Number(item.remaining_quantity1) > 0)
+                  .map(item => ({
+                    ...item,
+                    displayName: item.product_name || item.name || '',
+                    searchText: `${item.product_name || ''} ${item.product_code || ''}`.trim()
+                  }))
+                } 
                 placeholder={loadingInventory ? "กำลังโหลดข้อมูล..." : "--พิมพ์ค้นหาสินค้า--"} 
                 required
               />

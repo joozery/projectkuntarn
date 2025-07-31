@@ -6,7 +6,7 @@ import { customersService } from '@/services/customersService';
 import { inventoryService } from '@/services/inventoryService';
 import { employeesService } from '@/services/employeesService';
 import { checkersService } from '@/services/checkersService';
-import { installmentsService } from '@/services/installmentsService';
+import { contractsService } from '@/services/contractsService';
 import { 
   Calculator, 
   FileText, 
@@ -74,15 +74,11 @@ const SearchableSelectField = ({ label, value, onChange, options, placeholder, r
   const [filteredOptions, setFilteredOptions] = useState(options);
 
   useEffect(() => {
-    const filtered = options.filter(option => 
-      option.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      option.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      option.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      option.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      option.nickname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      option.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      option.surname?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filtered = options.filter(option => {
+      const searchText = option.searchText || 
+        `${option.name || ''} ${option.full_name || ''} ${option.fullName || ''} ${option.code || ''} ${option.nickname || ''} ${option.phone || ''} ${option.surname || ''} ${option.product_name || ''}`.toLowerCase();
+      return searchText.includes(searchTerm.toLowerCase());
+    });
     setFilteredOptions(filtered);
   }, [searchTerm, options]);
 
@@ -94,7 +90,7 @@ const SearchableSelectField = ({ label, value, onChange, options, placeholder, r
       <div className="relative">
         <input
           type="text"
-          value={isOpen ? searchTerm : (selectedOption?.name || selectedOption?.full_name || selectedOption?.fullName || selectedOption?.nickname || '')}
+          value={isOpen ? searchTerm : (selectedOption?.displayName || selectedOption?.name || selectedOption?.full_name || selectedOption?.fullName || selectedOption?.nickname || selectedOption?.product_name || '')}
           onChange={(e) => {
             if (isOpen) {
               setSearchTerm(e.target.value);
@@ -119,7 +115,7 @@ const SearchableSelectField = ({ label, value, onChange, options, placeholder, r
                 setSearchTerm('');
               }}
             >
-              {option.name || option.full_name || option.fullName || option.nickname}
+              {option.displayName || option.name || option.full_name || option.fullName || option.nickname || option.product_name}
               {option.phone && <span className="text-gray-500 ml-2">({option.phone})</span>}
             </div>
           ))}
@@ -168,6 +164,7 @@ const ContractEditForm = ({
   const [loadingCollectors, setLoadingCollectors] = useState(false);
   const [loadingContract, setLoadingContract] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [contracts, setContracts] = useState([]); // Added contracts state
 
   const [contractForm, setContractForm] = useState({
     contractNumber: '',
@@ -268,7 +265,7 @@ const ContractEditForm = ({
       try {
         setLoadingContract(true);
         console.log('🔍 Loading contract with ID:', contractId);
-        const response = await installmentsService.getById(contractId);
+        const response = await contractsService.getById(contractId);
         
         console.log('🔍 API Response:', response);
         
@@ -304,7 +301,7 @@ const ContractEditForm = ({
             customerId: contract.customerId || '',
             customerDetails: {
               title: contract.customerDetails?.title || contract.customerTitle || 'นาย',
-              name: contract.customerName || contract.customerFullName || '',
+              name: contract.customerName || '',
               surname: contract.customerSurname || '',
               nickname: contract.customerDetails?.nickname || contract.customerNickname || '',
               age: contract.customerDetails?.age || contract.customerAge || '',
@@ -473,6 +470,8 @@ const ContractEditForm = ({
         }
         
         console.log('🔍 Processed inventory data:', inventoryData);
+        console.log('🔍 All inventory items:', inventoryData.length);
+        console.log('🔍 Active inventory items:', inventoryData.filter(item => item.status === 'active' && Number(item.remaining_quantity1) > 0).length);
         setAllInventory(inventoryData);
       } catch (error) {
         console.error('Error loading inventory:', error);
@@ -593,6 +592,40 @@ const ContractEditForm = ({
     loadCollectors();
   }, [selectedBranch]);
 
+  // Load contracts to get product names for inventory
+  useEffect(() => {
+    const loadContracts = async () => {
+      if (!selectedBranch) return;
+      
+      try {
+        setLoadingContract(true); // Re-use loadingContract state
+        console.log('🔍 Loading contracts for branch:', selectedBranch);
+        const response = await contractsService.getAll(selectedBranch);
+        
+        console.log('🔍 Contracts response:', response);
+        
+        let contractsData = [];
+        if (response.data?.success && Array.isArray(response.data.data)) {
+          contractsData = response.data.data;
+        } else if (Array.isArray(response.data)) {
+          contractsData = response.data;
+        }
+        
+        console.log('🔍 Processed contracts data:', contractsData);
+        console.log('🔍 Contracts with product_id:', contractsData.filter(c => c.product_id));
+        setContracts(contractsData);
+      } catch (error) {
+        console.error('Error loading contracts:', error);
+        console.warn('⚠️ Contracts loading failed, continuing without contracts data');
+        setContracts([]);
+      } finally {
+        setLoadingContract(false);
+      }
+    };
+
+    loadContracts();
+  }, [selectedBranch]);
+
   // Map collectorId from line when collectors data is loaded
   useEffect(() => {
     if (allCollectors.length > 0 && contractForm.line && !contractForm.collectorId) {
@@ -670,7 +703,7 @@ const ContractEditForm = ({
     
     try {
       setSubmitting(true);
-      const response = await installmentsService.update(contractId, contractData);
+      const response = await contractsService.update(contractId, contractData);
       
       if (response.data?.success) {
         toast({
@@ -770,7 +803,14 @@ const ContractEditForm = ({
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
             <RadioGroup label="คำนำหน้าชื่อ" value={contractForm.customerDetails.title} onChange={(value) => handleDetailChange('customerDetails', 'title', value)} options={['นาย', 'นาง', 'นางสาว']} />
-            <InputField label="ชื่อ-สกุล" value={contractForm.customerDetails.name} onChange={(e) => handleDetailChange('customerDetails', 'name', e.target.value)} placeholder="ชื่อ-สกุล" required/>
+            <InputField label="ชื่อ-สกุล" value={`${contractForm.customerDetails.name} ${contractForm.customerDetails.surname}`.trim()} onChange={(e) => {
+              const fullName = e.target.value;
+              const nameParts = fullName.split(' ');
+              const firstName = nameParts[0] || '';
+              const lastName = nameParts.slice(1).join(' ') || '';
+              handleDetailChange('customerDetails', 'name', firstName);
+              handleDetailChange('customerDetails', 'surname', lastName);
+            }} placeholder="ชื่อ-สกุล" required/>
             <InputField label="ชื่อเล่น" value={contractForm.customerDetails.nickname} onChange={(e) => handleDetailChange('customerDetails', 'nickname', e.target.value)} placeholder="ชื่อเล่น"/>
             <InputField label="อายุ" value={contractForm.customerDetails.age} onChange={(e) => handleDetailChange('customerDetails', 'age', e.target.value)} placeholder="อายุ" type="number"/>
             <InputField label="เลขบัตรประชาชน" value={contractForm.customerDetails.idCard} onChange={(e) => handleDetailChange('customerDetails', 'idCard', e.target.value)} placeholder="เลขบัตรประชาชน"/>
@@ -790,7 +830,14 @@ const ContractEditForm = ({
         <FormSection title="รายละเอียดผู้ค้ำ" icon={Shield}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
             <RadioGroup label="คำนำหน้าชื่อ" value={contractForm.guarantorDetails.title} onChange={(value) => handleDetailChange('guarantorDetails', 'title', value)} options={['นาย', 'นาง', 'นางสาว']} />
-            <InputField label="ชื่อ-สกุล" value={contractForm.guarantorDetails.name} onChange={(e) => handleDetailChange('guarantorDetails', 'name', e.target.value)} placeholder="ชื่อ-สกุล" />
+            <InputField label="ชื่อ-สกุล" value={`${contractForm.guarantorDetails.name} ${contractForm.guarantorDetails.surname}`.trim()} onChange={(e) => {
+              const fullName = e.target.value;
+              const nameParts = fullName.split(' ');
+              const firstName = nameParts[0] || '';
+              const lastName = nameParts.slice(1).join(' ') || '';
+              handleDetailChange('guarantorDetails', 'name', firstName);
+              handleDetailChange('guarantorDetails', 'surname', lastName);
+            }} placeholder="ชื่อ-สกุล" />
             <InputField label="ชื่อเล่น" value={contractForm.guarantorDetails.nickname} onChange={(e) => handleDetailChange('guarantorDetails', 'nickname', e.target.value)} placeholder="ชื่อเล่น"/>
             <InputField label="อายุ" value={contractForm.guarantorDetails.age} onChange={(e) => handleDetailChange('guarantorDetails', 'age', e.target.value)} placeholder="อายุ" type="number"/>
             <InputField label="เลขบัตรประชาชน" value={contractForm.guarantorDetails.idCard} onChange={(e) => handleDetailChange('guarantorDetails', 'idCard', e.target.value)} placeholder="เลขบัตรประชาชน"/>
@@ -813,8 +860,19 @@ const ContractEditForm = ({
               label="ชนิดสินค้า" 
               value={contractForm.productId} 
               onChange={(e) => handleSelectChange('productId', e.target.value)} 
-                              options={allInventory} 
-                              placeholder={loadingInventory ? "กำลังโหลดข้อมูล..." : "--พิมพ์ค้นหาสินค้า--"} 
+              options={allInventory
+                .filter(item => item.status === 'active' && Number(item.remaining_quantity1) > 0)
+                .map(item => {
+                  console.log('🔍 Inventory item:', item.id, 'product_name:', item.product_name);
+                  
+                  return {
+                    ...item,
+                    displayName: item.product_name || item.name || '',
+                    searchText: `${item.product_name || ''} ${item.product_code || ''}`.trim()
+                  };
+                })
+              } 
+              placeholder={loadingInventory ? "กำลังโหลดข้อมูล..." : "--พิมพ์ค้นหาสินค้า--"} 
               required
             />
             <InputField label="ราคารวม" value={contractForm.productDetails.price} onChange={(e) => handleDetailChange('productDetails', 'price', e.target.value)} placeholder="ราคารวม" type="number" />

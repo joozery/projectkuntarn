@@ -12,8 +12,19 @@ const AdminLayout = ({
 }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [customerData, setCustomerData] = useState(null);
 
   const currentBranch = branches.find(branch => branch.id === selectedBranch) || branches[0];
+
+  const handleBack = () => {
+    setActiveTab('checkers');
+    setCustomerData(null);
+  };
+
+  const handleViewPaymentSchedule = (customer) => {
+    setCustomerData(customer);
+    setActiveTab('payment-schedule');
+  };
 
   // Note: Data filtering is now handled by individual pages using API calls
   // with branchId parameter instead of client-side filtering
@@ -44,6 +55,9 @@ const AdminLayout = ({
           activeTab={activeTab}
           selectedBranch={selectedBranch}
           currentBranch={currentBranch}
+          customerData={customerData}
+          onBack={handleBack}
+          onViewPaymentSchedule={handleViewPaymentSchedule}
         />
       </div>
     </div>

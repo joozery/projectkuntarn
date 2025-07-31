@@ -19,7 +19,7 @@ import { checkersService } from '@/services/checkersService';
 import CheckerInstallmentReport from './CheckerInstallmentReport';
 import CheckerCustomersPage from './CheckerCustomersPage';
 
-const CheckersPage = ({ selectedBranch, currentBranch }) => {
+const CheckersPage = ({ selectedBranch, currentBranch, onViewPaymentSchedule }) => {
   const [checkers, setCheckers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -195,6 +195,7 @@ const CheckersPage = ({ selectedBranch, currentBranch }) => {
           currentBranch={currentBranch}
           checker={selectedChecker}
           onBack={closeCustomersPage}
+          onViewPaymentSchedule={onViewPaymentSchedule}
         />
       ) : (
         <>

@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import api from '@/lib/api';
 
-const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack }) => {
+const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack, onViewPaymentSchedule }) => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,8 +52,17 @@ const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack }
       
       const response = await api.get(`/customers/checker/${checker.id}/contracts`, { params });
       
+      console.log('🔍 Checker customers API response:', response);
+      
       if (response.data?.success) {
-        setCustomers(response.data.data || []);
+        const customersData = response.data.data || [];
+        console.log('🔍 Customers data:', customersData);
+        console.log('🔍 First customer guarantor data:', customersData[0] ? {
+          guarantor_name: customersData[0].guarantor_name,
+          guarantor_id_card: customersData[0].guarantor_id_card,
+          guarantor_nickname: customersData[0].guarantor_nickname
+        } : 'No customers');
+        setCustomers(customersData);
       } else {
         setCustomers([]);
       }
@@ -110,6 +119,24 @@ const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack }
       title: "ดูข้อมูลผู้ค้ำ",
       description: `ผู้ค้ำ: ${customer.guarantor_name}`,
     });
+  };
+
+  const viewPaymentSchedule = (customer) => {
+    // Navigate to payment schedule page for this customer
+    // You can implement navigation logic here
+    console.log('🔍 viewPaymentSchedule called with customer:', customer);
+    console.log('🔍 Customer ID:', customer.id);
+    console.log('🔍 Customer full_name:', customer.full_name);
+    
+    toast({
+      title: "ดูตารางผ่อนของลูกค้า",
+      description: `ดูตารางผ่อนของ ${customer.full_name}`,
+    });
+    
+    // TODO: Implement navigation to payment schedule page
+    // Example: navigate(`/payment-schedule/${customer.id}`);
+    // For now, show a modal or navigate to a new route
+    onViewPaymentSchedule(customer);
   };
 
   const getStatusBadge = (status) => {
@@ -436,29 +463,11 @@ const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack }
                         <Button
                           size="sm"
                           className="bg-blue-600 hover:bg-blue-700 text-white"
-                          onClick={() => viewCustomer(customer)}
-                        >
-                          <Eye className="w-3 h-3 mr-1" />
-                          ดู
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="bg-purple-600 hover:bg-purple-700 text-white"
-                          onClick={() => viewContracts(customer)}
+                          onClick={() => viewPaymentSchedule(customer)}
                         >
                           <FileText className="w-3 h-3 mr-1" />
-                          สัญญา
+                          ดูตารางผ่อน
                         </Button>
-                        {customer.guarantor_name && (
-                          <Button
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700 text-white"
-                            onClick={() => viewGuarantor(customer)}
-                          >
-                            <Shield className="w-3 h-3 mr-1" />
-                            ผู้ค้ำ
-                          </Button>
-                        )}
                         <Button
                           size="sm"
                           className="bg-yellow-600 hover:bg-yellow-700 text-white"

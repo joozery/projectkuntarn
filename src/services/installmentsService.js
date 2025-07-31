@@ -4,9 +4,26 @@ const BASE_URL = '/installments';
 
 export const installmentsService = {
   // Get all installments
-  getAll: async (branchId, params = {}) => {
-    const queryParams = new URLSearchParams({ branchId, ...params });
-    return api.get(`${BASE_URL}?${queryParams}`);
+  getAll: async (branchId = null, params = {}) => {
+    const queryParams = new URLSearchParams();
+    if (branchId) queryParams.append('branchId', branchId);
+    Object.keys(params).forEach(key => {
+      if (params[key] !== null && params[key] !== undefined) {
+        queryParams.append(key, params[key]);
+      }
+    });
+    const url = queryParams.toString() ? `${BASE_URL}?${queryParams}` : BASE_URL;
+    console.log('🔍 installmentsService.getAll calling:', url);
+    try {
+      const response = await api.get(url);
+      console.log('✅ installmentsService.getAll response:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ installmentsService.getAll error:', error);
+      console.error('❌ Error details:', error.response?.data);
+      console.error('❌ Error status:', error.response?.status);
+      throw error;
+    }
   },
 
   // Get installment by ID

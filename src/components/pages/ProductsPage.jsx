@@ -6,6 +6,7 @@ import { Package, Plus, DollarSign, Trash2, Building2, Loader2, Search, Filter, 
 import ProductForm from '@/components/ProductForm';
 import { inventoryService } from '@/services/inventoryService';
 import { contractsService } from '@/services/contractsService';
+import Swal from 'sweetalert2';
 
 const ProductsPage = ({ selectedBranch, currentBranch }) => {
   const [products, setProducts] = useState([]);
@@ -20,9 +21,13 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
 
 
   useEffect(() => {
-    const loadProducts = async () => {
+    const loadData = async () => {
       setLoading(true);
       try {
+        // Load contracts first
+        const contractsData = await loadContracts();
+        
+        // Then load products with contract data
         const response = await inventoryService.getAll({
           branchId: selectedBranch,
           page: currentPage,
@@ -30,19 +35,31 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
         });
         
         if (response.data.success) {
-          setProducts(response.data.data);
+          // Get product names from installments table
+          const productsWithNames = response.data.data.map(product => {
+            // Find matching contract to get product name
+            const matchingContract = contractsData.find(contract => 
+              contract.product_id === product.id
+            );
+            
+            return {
+              ...product,
+              display_name: matchingContract?.product_name || product.product_name
+            };
+          });
+          
+          setProducts(productsWithNames);
         } else {
           console.error('Error loading products:', response.data.message);
         }
         setLoading(false);
       } catch (error) {
-        console.error('Error loading products:', error);
+        console.error('Error loading data:', error);
         setLoading(false);
       }
     };
 
-    loadProducts();
-    loadContracts();
+    loadData();
   }, [selectedBranch, currentPage]);
 
   const loadContracts = async () => {
@@ -51,16 +68,19 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
         const response = await contractsService.getAll(selectedBranch);
         const contractsData = response.data?.success ? response.data.data : (response.data || []);
         setContracts(contractsData);
+        return contractsData;
       }
+      return [];
     } catch (error) {
       console.error('Error loading contracts:', error);
       setContracts([]);
+      return [];
     }
   };
 
   // Filter products based on search term
   const filteredProducts = products.filter(product =>
-    product.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (product.display_name && product.display_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (product.product_code && product.product_code.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (product.contract_number && product.contract_number.toLowerCase().includes(searchTerm.toLowerCase()))
   );
@@ -85,13 +105,16 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
       setSubmitting(true);
       
       const inventoryData = {
-        product_name: productData.name,
-        product_code: productData.code || '',
-        contract_number: productData.contract || '',
-        cost_price: productData.price || 0,
-        receive_date: productData.receiveDate || null,
-        remarks: productData.remarks || '',
-        branch_id: selectedBranch
+        product_name: productData.productName,
+        product_code: productData.productCode,
+        contract_number: productData.contract,
+        cost_price: parseFloat(productData.costPrice?.replace(/,/g, '')),
+        receive_date: productData.receiveDate,
+        remarks: productData.remarks,
+        branch_id: selectedBranch,
+        status: 'active',
+        remaining_quantity1: 1,
+        sold_quantity1: 0
       };
       
       const response = await inventoryService.create(inventoryData);
@@ -105,22 +128,40 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
         });
         
         if (reloadResponse.data.success) {
-          setProducts(reloadResponse.data.data);
+          // Get product names from installments table
+          const productsWithNames = reloadResponse.data.data.map(product => {
+            // Find matching contract to get product name
+            const matchingContract = contracts.find(contract => 
+              contract.product_id === product.id
+            );
+            
+            return {
+              ...product,
+              display_name: matchingContract?.product_name || product.product_name
+            };
+          });
+          
+          setProducts(productsWithNames);
         }
         
-        toast({
-          title: "สำเร็จ",
-          description: "เพิ่มสินค้าเรียบร้อยแล้ว",
+        Swal.fire({
+          icon: 'success',
+          title: 'สำเร็จ!',
+          text: 'เพิ่มสินค้าเรียบร้อยแล้ว',
+          confirmButtonText: 'ตกลง',
+          confirmButtonColor: '#10b981'
         });
       } else {
-        throw new Error(response.data.message || 'Failed to create product');
+        throw new Error(response.data.message || 'Failed to add product');
       }
     } catch (error) {
       console.error('Error adding product:', error);
-      toast({
-        title: "เกิดข้อผิดพลาด",
-        description: "ไม่สามารถเพิ่มสินค้าได้",
-        variant: "destructive"
+      Swal.fire({
+        icon: 'error',
+        title: 'เกิดข้อผิดพลาด!',
+        text: 'ไม่สามารถเพิ่มสินค้าได้',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#ef4444'
       });
     } finally {
       setSubmitting(false);
@@ -128,35 +169,67 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
   };
 
   const deleteProduct = async (productId) => {
-    try {
-      const response = await inventoryService.delete(productId);
-      
-      if (response.data.success) {
-        // Reload products to get the updated list
-        const reloadResponse = await inventoryService.getAll({
-          branchId: selectedBranch,
-          page: currentPage,
-          limit: itemsPerPage
-        });
+    // Show confirmation dialog
+    const result = await Swal.fire({
+      title: 'ยืนยันการลบ',
+      text: 'คุณต้องการลบสินค้านี้หรือไม่?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'ลบ',
+      cancelButtonText: 'ยกเลิก'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const response = await inventoryService.delete(productId);
         
-        if (reloadResponse.data.success) {
-          setProducts(reloadResponse.data.data);
+        if (response.data.success) {
+          // Reload products to get the updated list
+          const reloadResponse = await inventoryService.getAll({
+            branchId: selectedBranch,
+            page: currentPage,
+            limit: itemsPerPage
+          });
+          
+          if (reloadResponse.data.success) {
+            // Get product names from installments table
+            const productsWithNames = reloadResponse.data.data.map(product => {
+              // Find matching contract to get product name
+              const matchingContract = contracts.find(contract => 
+                contract.product_id === product.id
+              );
+              
+              return {
+                ...product,
+                display_name: matchingContract?.product_name || product.product_name
+              };
+            });
+            
+            setProducts(productsWithNames);
+          }
+          
+          Swal.fire({
+            icon: 'success',
+            title: 'สำเร็จ!',
+            text: 'ลบสินค้าเรียบร้อยแล้ว',
+            confirmButtonText: 'ตกลง',
+            confirmButtonColor: '#10b981'
+          });
+        } else {
+          throw new Error(response.data.message || 'Failed to delete product');
         }
-        
-        toast({
-          title: "สำเร็จ",
-          description: "ลบสินค้าเรียบร้อยแล้ว",
+      } catch (error) {
+        console.error('Error deleting product:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'เกิดข้อผิดพลาด!',
+          text: 'ไม่สามารถลบสินค้าได้',
+          confirmButtonText: 'ตกลง',
+          confirmButtonColor: '#ef4444'
         });
-      } else {
-        throw new Error(response.data.message || 'Failed to delete product');
       }
-    } catch (error) {
-      console.error('Error deleting product:', error);
-      toast({
-        title: "เกิดข้อผิดพลาด",
-        description: "ไม่สามารถลบสินค้าได้",
-        variant: "destructive"
-      });
     }
   };
 
@@ -188,32 +261,63 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
         });
         
         if (reloadResponse.data.success) {
-          setProducts(reloadResponse.data.data);
+          // Get product names from installments table
+          const productsWithNames = reloadResponse.data.data.map(product => {
+            // Find matching contract to get product name
+            const matchingContract = contracts.find(contract => 
+              contract.product_id === product.id
+            );
+            
+            return {
+              ...product,
+              display_name: matchingContract?.product_name || product.product_name
+            };
+          });
+          
+          setProducts(productsWithNames);
         }
         
         setEditingProduct(null);
         
-        toast({
-          title: "สำเร็จ",
-          description: "แก้ไขสินค้าเรียบร้อยแล้ว",
+        Swal.fire({
+          icon: 'success',
+          title: 'สำเร็จ!',
+          text: 'แก้ไขสินค้าเรียบร้อยแล้ว',
+          confirmButtonText: 'ตกลง',
+          confirmButtonColor: '#10b981'
         });
       } else {
         throw new Error(response.data.message || 'Failed to update product');
       }
     } catch (error) {
       console.error('Error updating product:', error);
-      toast({
-        title: "เกิดข้อผิดพลาด",
-        description: "ไม่สามารถแก้ไขสินค้าได้",
-        variant: "destructive"
+      Swal.fire({
+        icon: 'error',
+        title: 'เกิดข้อผิดพลาด!',
+        text: 'ไม่สามารถแก้ไขสินค้าได้',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#ef4444'
       });
     } finally {
       setSubmitting(false);
     }
   };
 
-  const cancelEdit = () => {
-    setEditingProduct(null);
+  const cancelEdit = async () => {
+    const result = await Swal.fire({
+      title: 'ยืนยันการยกเลิก',
+      text: 'คุณต้องการยกเลิกการแก้ไขหรือไม่? ข้อมูลที่แก้ไขจะหายไป',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#6b7280',
+      cancelButtonColor: '#10b981',
+      confirmButtonText: 'ยกเลิก',
+      cancelButtonText: 'แก้ไขต่อ'
+    });
+
+    if (result.isConfirmed) {
+      setEditingProduct(null);
+    }
   };
 
   if (loading) {
@@ -265,7 +369,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
               contracts={contracts}
               initialData={{
                 productCode: editingProduct.product_code || '',
-                productName: editingProduct.product_name || '',
+                productName: editingProduct.display_name || editingProduct.product_name || '',
                 contract: editingProduct.contract_number || '',
                 costPrice: editingProduct.cost_price ? editingProduct.cost_price.toString() : '',
                 receiveDate: editingProduct.receive_date ? editingProduct.receive_date.split('T')[0] : '',
@@ -342,8 +446,8 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                     {product.receive_date ? new Date(product.receive_date).toLocaleDateString('th-TH') : '-'}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">{product.product_code || '-'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate" title={product.product_name}>
-                    {product.product_name}
+                  <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate" title={product.display_name}>
+                    {product.display_name}
                   </td>
                   <td className="px-4 py-3 text-sm">
                     {product.contract_number ? (

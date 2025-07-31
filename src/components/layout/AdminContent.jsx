@@ -5,7 +5,9 @@ import CustomersPage from '@/components/pages/CustomersPage';
 import EmployeesPage from '@/components/pages/EmployeesPage';
 import CollectorsPage from '@/components/pages/CollectorsPage';
 import CheckersPage from '@/components/pages/CheckersPage';
+import CheckerInstallmentReport from '@/components/pages/CheckerInstallmentReport';
 import SalesIndexPage from '@/components/pages/SalesIndexPage';
+import PaymentSchedulePage from '@/components/pages/PaymentSchedulePage';
 
 import ContractsPage from '@/components/pages/ContractsPage';
 import PaymentsPage from '@/components/pages/PaymentsPage';
@@ -18,7 +20,10 @@ import SettingsPage from '@/components/pages/SettingsPage';
 const AdminContent = ({ 
   activeTab, 
   selectedBranch,
-  currentBranch
+  currentBranch,
+  customerData,
+  onBack,
+  onViewPaymentSchedule
 }) => {
 
   const renderContent = () => {
@@ -63,6 +68,15 @@ const AdminContent = ({
           <CheckersPage 
             selectedBranch={selectedBranch}
             currentBranch={currentBranch}
+            onViewPaymentSchedule={onViewPaymentSchedule}
+          />
+        );
+      case 'checker-installment-report':
+        return (
+          <CheckerInstallmentReport 
+            selectedBranch={selectedBranch}
+            currentBranch={currentBranch}
+            onBack={onBack}
           />
         );
       case 'sales-index':
@@ -70,6 +84,16 @@ const AdminContent = ({
           <SalesIndexPage 
             selectedBranch={selectedBranch}
             currentBranch={currentBranch}
+          />
+        );
+      case 'payment-schedule':
+        return (
+          <PaymentSchedulePage 
+            selectedBranch={selectedBranch}
+            currentBranch={currentBranch}
+            customerData={customerData}
+            onBack={onBack}
+            onViewPaymentSchedule={onViewPaymentSchedule}
           />
         );
 
