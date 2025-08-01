@@ -42,6 +42,15 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
   const [customerInstallment, setCustomerInstallment] = useState(null);
   const [collectors, setCollectors] = useState([]);
   const [loadingCollectors, setLoadingCollectors] = useState(false);
+  const [editingPayment, setEditingPayment] = useState(null);
+  const [editForm, setEditForm] = useState({
+    paymentDate: '',
+    receiptNumber: '',
+    amount: '',
+    status: 'ปกติ',
+    discount: 'ไม่มีส่วนลด',
+    notes: ''
+  });
 
   // Use customer data from props or fallback to mock data
   const customerInfo = customerData || customer || {
@@ -257,6 +266,15 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
     };
   };
 
+  // ฟังก์ชันสำหรับเงินดาวน์ (ไม่มี notes)
+  const getDownPaymentInfo = () => {
+    return {
+      receiptNumber: '-',
+      status: 'ปกติ',
+      discount: 'ไม่มี'
+    };
+  };
+
   // ฟังก์ชันแปลงวันที่ให้ถูกต้อง
   const formatDate = (dateString) => {
     if (!dateString) return '-';
@@ -283,7 +301,7 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
   // สร้างรายการงวดที่ชำระแล้ว
   const paidInstallments = [
     // เงินดาวน์/งวดแรก (แสดงเสมอ) - ใช้ข้อมูลจาก API
-    {
+    ...(parseFloat(mappedCustomerInfo.downPayment || 0) > 0 ? [{
       id: 'down-payment',
       notes: 'เงินดาวน์/งวดแรก',
       paymentDate: customerInstallment?.contract_date || customerInstallment?.createdAt || mappedCustomerInfo.collectionDate,
@@ -291,7 +309,7 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
       amount: parseFloat(mappedCustomerInfo.downPayment || 0),
       status: 'paid',
       isDownPayment: true
-    },
+    }] : []),
     // งวดที่ชำระแล้วจาก API (งวดที่ 2, 3, 4, ...) - ไม่รวมงวดแรกที่ซ้ำ
     ...installments
       .filter(item => item.status === 'paid' && !item.notes?.includes('เงินดาวน์') && !item.notes?.includes('งวดแรก'))
@@ -451,6 +469,98 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
           variant: "destructive"
         });
       }
+    }
+  };
+
+  const handleEditPayment = async (paymentId) => {
+    try {
+      // ตรวจสอบว่าเป็นเงินดาวน์หรือไม่
+      if (paymentId === 'down-payment') {
+        // สำหรับเงินดาวน์ ให้อัปเดตข้อมูลในสัญญาแทน
+        const updateData = {
+          amount: parseFloat(editForm.amount),
+          paymentDate: editForm.paymentDate,
+          receiptNumber: editForm.receiptNumber,
+          status: editForm.status,
+          discount: editForm.discount
+        };
+
+        console.log('🔍 Updating down payment:', {
+          installmentId: customerInstallment.id,
+          updateData
+        });
+
+        await paymentScheduleService.updateDownPayment(customerInstallment.id, updateData);
+      } else {
+        // สำหรับงวดอื่นๆ ให้อัปเดต payment ปกติ
+        const updateData = {
+          amount: parseFloat(editForm.amount),
+          payment_date: editForm.paymentDate,
+          status: 'paid',
+          notes: `ใบเสร็จ: ${editForm.receiptNumber}, สถานะ: ${editForm.status}, ส่วนลด: ${editForm.discount}`,
+          receipt_number: editForm.receiptNumber
+        };
+
+        console.log('🔍 Updating payment:', {
+          installmentId: customerInstallment.id,
+          paymentId,
+          updateData
+        });
+
+        await paymentScheduleService.updatePayment(customerInstallment.id, paymentId, updateData);
+      }
+      
+      // Reload payments data
+      await loadCustomerData();
+      
+      // Reset edit form
+      setEditingPayment(null);
+      setEditForm({
+        paymentDate: '',
+        receiptNumber: '',
+        amount: '',
+        status: 'ปกติ',
+        discount: 'ไม่มีส่วนลด',
+        notes: ''
+      });
+      
+      toast({
+        title: "แก้ไขสำเร็จ",
+        description: "แก้ไขรายการชำระเงินเรียบร้อยแล้ว",
+      });
+    } catch (error) {
+      console.error('Error updating payment:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถแก้ไขรายการชำระเงินได้",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleEditClick = (payment) => {
+    setEditingPayment(payment.id);
+    
+    // Parse existing payment data
+    const { receiptNumber, status, discount } = payment.isDownPayment 
+      ? getDownPaymentInfo() 
+      : parsePaymentNotes(payment.notes);
+    
+    setEditForm({
+      paymentDate: payment.paymentDate ? new Date(payment.paymentDate).toISOString().split('T')[0] : '',
+      receiptNumber: receiptNumber !== '-' ? receiptNumber : '',
+      amount: payment.amount || '',
+      status: status !== '-' ? status : 'ปกติ',
+      discount: discount !== '-' ? (discount === 'มี' ? 'ส่วนลด' : 'ไม่มีส่วนลด') : 'ไม่มีส่วนลด',
+      notes: payment.notes || ''
+    });
+
+    // แจ้งเตือนเมื่อแก้ไขเงินดาวน์
+    if (payment.id === 'down-payment') {
+      toast({
+        title: "แก้ไขเงินดาวน์",
+        description: "การแก้ไขเงินดาวน์จะอัปเดตข้อมูลในสัญญา",
+      });
     }
   };
 
@@ -1115,7 +1225,10 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
                     <tbody className="bg-white divide-y divide-gray-200">
                       {paidInstallments.length > 0 ? (
                         paidInstallments.map((item, index) => {
-                          const { receiptNumber, status, discount } = parsePaymentNotes(item.notes);
+                          // ใช้ฟังก์ชันที่แตกต่างกันสำหรับเงินดาวน์และงวดปกติ
+                          const { receiptNumber, status, discount } = item.isDownPayment 
+                            ? getDownPaymentInfo() 
+                            : parsePaymentNotes(item.notes);
                           
                           // กำหนดชื่องวด
                           let installmentName = '';
@@ -1135,69 +1248,194 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
                               className="hover:bg-gray-50 transition-colors"
                             >
                               <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="text-sm font-medium text-gray-900">
-                                  {installmentName}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="text-sm text-gray-900">
-                                  {formatDate(item.paymentDate)}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="text-sm text-gray-900">
-                                  {receiptNumber}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="text-sm font-medium text-green-600">
-                                  ฿{parseFloat(item.amount || 0).toLocaleString()}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="text-sm text-gray-900">
-                                  ฿{calculateRemainingBalance(index).toLocaleString()}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  status === 'ปกติ' ? 'bg-gray-100 text-gray-800' :
-                                  status === 'เร่งรัด' ? 'bg-yellow-100 text-yellow-800' :
-                                  status === 'รับคืนสินค้า' ? 'bg-red-100 text-red-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {status}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  discount === 'มี' ? 'bg-purple-100 text-purple-800' :
-                                  discount === 'ไม่มี' ? 'bg-gray-100 text-gray-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {discount}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex items-center space-x-2">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
-                                  >
-                                    <Edit className="w-3 h-3" />
-                                  </Button>
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {installmentName}
+                                  </div>
+                                  {item.isDownPayment && (
+                                    <div className="text-xs text-blue-600">
+                                      เงินดาวน์
+                                    </div>
+                                  )}
                                   {!item.isDownPayment && (
+                                    <div className="text-xs text-gray-500">
+                                      งวดที่ {index + 1}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                {editingPayment === item.id ? (
+                                  <input
+                                    type="date"
+                                    value={editForm.paymentDate}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, paymentDate: e.target.value }))}
+                                    className="w-32 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  />
+                                ) : (
+                                  <div>
+                                    <div className="text-sm text-gray-900">
+                                      {formatDate(item.paymentDate)}
+                                    </div>
+                                    <div className="text-xs text-green-600">
+                                      ชำระแล้ว
+                                    </div>
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                {editingPayment === item.id ? (
+                                  <input
+                                    type="text"
+                                    value={editForm.receiptNumber}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, receiptNumber: e.target.value }))}
+                                    placeholder="เลขที่ใบเสร็จ"
+                                    className="w-28 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  />
+                                ) : (
+                                  <div>
+                                    <div className="text-sm text-gray-900">
+                                      {receiptNumber}
+                                    </div>
+                                    {receiptNumber !== '-' && (
+                                      <div className="text-xs text-blue-600">
+                                        ใบเสร็จ
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                {editingPayment === item.id ? (
+                                  <input
+                                    type="number"
+                                    value={editForm.amount}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, amount: e.target.value }))}
+                                    className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    step="0.01"
+                                  />
+                                ) : (
+                                  <div>
+                                    <div className="text-sm font-medium text-green-600">
+                                      ฿{parseFloat(item.amount || 0).toLocaleString()}
+                                    </div>
+                                    <div className="text-xs text-green-600">
+                                      ชำระแล้ว
+                                    </div>
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div>
+                                  <div className="text-sm text-gray-900">
+                                    ฿{calculateRemainingBalance(index).toLocaleString()}
+                                  </div>
+                                  {index < paidInstallments.length - 1 && (
+                                    <div className="text-xs text-gray-500">
+                                      งวดที่เหลือ: {paidInstallments.length - index - 1}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                {editingPayment === item.id ? (
+                                  <select
+                                    value={editForm.status}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, status: e.target.value }))}
+                                    className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  >
+                                    <option value="ปกติ">ปกติ</option>
+                                    <option value="เร่งรัด">เร่งรัด</option>
+                                    <option value="รับคืนสินค้า">รับคืนสินค้า</option>
+                                  </select>
+                                ) : (
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    status === 'ปกติ' ? 'bg-gray-100 text-gray-800' :
+                                    status === 'เร่งรัด' ? 'bg-yellow-100 text-yellow-800' :
+                                    status === 'รับคืนสินค้า' ? 'bg-red-100 text-red-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {status}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                {editingPayment === item.id ? (
+                                  <select
+                                    value={editForm.discount}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, discount: e.target.value }))}
+                                    className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  >
+                                    <option value="ไม่มีส่วนลด">ไม่มีส่วนลด</option>
+                                    <option value="ส่วนลด">ส่วนลด</option>
+                                  </select>
+                                ) : (
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    discount === 'มี' ? 'bg-purple-100 text-purple-800' :
+                                    discount === 'ไม่มี' ? 'bg-gray-100 text-gray-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {discount}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                {editingPayment === item.id ? (
+                                  <div className="flex items-center space-x-2">
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleEditPayment(item.id)}
+                                      className="bg-green-600 hover:bg-green-700 text-white"
+                                    >
+                                      บันทึก
+                                    </Button>
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      onClick={() => handleDeletePayment(item.id)}
-                                      className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+                                      onClick={() => {
+                                        setEditingPayment(null);
+                                        setEditForm({
+                                          paymentDate: '',
+                                          receiptNumber: '',
+                                          amount: '',
+                                          status: 'ปกติ',
+                                          discount: 'ไม่มีส่วนลด',
+                                          notes: ''
+                                        });
+                                      }}
                                     >
-                                      <Trash2 className="w-3 h-3" />
+                                      ยกเลิก
                                     </Button>
-                                  )}
-                                </div>
+                                  </div>
+                                ) : (
+                                  <div>
+                                    <div className="flex items-center space-x-2">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => handleEditClick(item)}
+                                        className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
+                                      >
+                                        <Edit className="w-3 h-3" />
+                                      </Button>
+                                      {!item.isDownPayment && item.id !== 'down-payment' && (
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => handleDeletePayment(item.id)}
+                                          className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+                                        >
+                                          <Trash2 className="w-3 h-3" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                    {item.id === 'down-payment' && (
+                                      <div className="text-xs text-blue-600 mt-1">
+                                        แก้ไขเงินดาวน์
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                               </td>
                             </motion.tr>
                           );

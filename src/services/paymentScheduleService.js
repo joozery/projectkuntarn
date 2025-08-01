@@ -42,5 +42,23 @@ export const paymentScheduleService = {
   // ดึงประวัติการเก็บเงิน
   getCollections: async (installmentId) => {
     return api.get(`${BASE_URL}/${installmentId}/collections`);
+  },
+
+  // อัปเดตข้อมูลสัญญา
+  update: async (installmentId, installmentData) => {
+    console.log('🔍 paymentScheduleService.update:', {
+      installmentId,
+      installmentData
+    });
+    return api.put(`${BASE_URL}/${installmentId}`, installmentData);
+  },
+
+  // อัปเดตเงินดาวน์
+  updateDownPayment: async (installmentId, downPaymentData) => {
+    console.log('🔍 paymentScheduleService.updateDownPayment:', {
+      installmentId,
+      downPaymentData
+    });
+    return api.put(`${BASE_URL}/${installmentId}/down-payment`, downPaymentData);
   }
 }; 

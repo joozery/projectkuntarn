@@ -23,6 +23,14 @@ const PaymentScheduleTable = ({ installmentId, selectedBranch }) => {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
   const [editingPayment, setEditingPayment] = useState(null);
+  const [editForm, setEditForm] = useState({
+    status: 'pending',
+    paymentDate: '',
+    receiptNumber: '',
+    amount: '',
+    dueDate: '',
+    notes: ''
+  });
   const [collectors, setCollectors] = useState([]);
   const [loadingCollectors, setLoadingCollectors] = useState(false);
 
@@ -119,26 +127,34 @@ const PaymentScheduleTable = ({ installmentId, selectedBranch }) => {
     }
   }, [loadPayments]);
 
-  const handlePaymentUpdate = async (paymentId, status, paymentDate = null, notes = '', receiptNumber = '', amount = null, dueDate = null) => {
+  const handlePaymentUpdate = async (paymentId) => {
     try {
       const paymentData = {
-        status,
-        paymentDate: status === 'paid' ? paymentDate : null,
-        notes,
-        receipt_number: receiptNumber,
-        amount: amount,
-        due_date: dueDate
+        status: editForm.status,
+        paymentDate: editForm.status === 'paid' ? editForm.paymentDate : null,
+        notes: editForm.notes,
+        receipt_number: editForm.receiptNumber,
+        amount: editForm.amount,
+        due_date: editForm.dueDate
       };
       
       await installmentsService.updatePayment(installmentId, paymentId, paymentData);
       
       toast({
         title: "อัพเดทสำเร็จ",
-        description: `อัพเดทสถานะการชำระเงินเป็น ${status === 'paid' ? 'ชำระแล้ว' : 'รอชำระ'}`,
+        description: `อัพเดทข้อมูลการชำระเงินเรียบร้อยแล้ว`,
       });
       
       loadPayments(); // Reload payments
       setEditingPayment(null);
+      setEditForm({
+        status: 'pending',
+        paymentDate: '',
+        receiptNumber: '',
+        amount: '',
+        dueDate: '',
+        notes: ''
+      });
     } catch (error) {
       console.error('Error updating payment:', error);
       toast({
@@ -147,6 +163,18 @@ const PaymentScheduleTable = ({ installmentId, selectedBranch }) => {
         variant: "destructive"
       });
     }
+  };
+
+  const handleEditClick = (payment) => {
+    setEditingPayment(payment.id);
+    setEditForm({
+      status: payment.status,
+      paymentDate: payment.paymentDate || '',
+      receiptNumber: payment.receiptNumber || '',
+      amount: payment.amount || '',
+      dueDate: payment.dueDate || '',
+      notes: payment.notes || ''
+    });
   };
 
   const getStatusIcon = (status) => {
@@ -309,28 +337,121 @@ const PaymentScheduleTable = ({ installmentId, selectedBranch }) => {
               {payments.map((payment, index) => (
                 <tr key={payment.id} className={isOverdue(payment.dueDate) ? 'bg-red-50' : ''}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {index + 1}
+                    {payment.notes || `งวดที่ ${index + 1}`}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ฿{parseFloat(payment.amount).toLocaleString()}
+                    {editingPayment === payment.id ? (
+                      <input
+                        type="number"
+                        value={editForm.amount}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, amount: e.target.value }))}
+                        className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        step="0.01"
+                      />
+                    ) : (
+                      <div>
+                        <div className="font-medium text-gray-900">฿{parseFloat(payment.amount).toLocaleString()}</div>
+                        {payment.status === 'paid' && (
+                          <div className="text-xs text-green-600">ชำระแล้ว</div>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(payment.dueDate).toLocaleDateString('th-TH')}
+                    {editingPayment === payment.id ? (
+                      <input
+                        type="date"
+                        value={editForm.dueDate}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, dueDate: e.target.value }))}
+                        className="w-32 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    ) : (
+                      <div>
+                        <div className="text-sm text-gray-900">{new Date(payment.dueDate).toLocaleDateString('th-TH')}</div>
+                        {isOverdue(payment.dueDate) && payment.status !== 'paid' && (
+                          <div className="text-xs text-red-600">เกินกำหนด</div>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString('th-TH') : '-'}
+                    {editingPayment === payment.id ? (
+                      <input
+                        type="date"
+                        value={editForm.paymentDate}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, paymentDate: e.target.value }))}
+                        className="w-32 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    ) : (
+                      <div>
+                        <div className="text-sm text-gray-900">
+                          {payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString('th-TH') : '-'}
+                        </div>
+                        {payment.paymentDate && (
+                          <div className="text-xs text-green-600">ชำระแล้ว</div>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {payment.receiptNumber || '-'}
+                    {editingPayment === payment.id ? (
+                      <input
+                        type="text"
+                        value={editForm.receiptNumber}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, receiptNumber: e.target.value }))}
+                        placeholder="เลขที่ใบเสร็จ"
+                        className="w-28 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    ) : (
+                      <div>
+                        <div className="text-sm text-gray-900">{payment.receiptNumber || '-'}</div>
+                        {payment.receiptNumber && (
+                          <div className="text-xs text-blue-600">ใบเสร็จ</div>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(payment.status)}`}>
-                      {getStatusIcon(payment.status)}
-                      <span className="ml-1">{getStatusText(payment.status)}</span>
-                    </span>
+                    {editingPayment === payment.id ? (
+                      <select
+                        value={editForm.status}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, status: e.target.value }))}
+                        className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="pending">รอชำระ</option>
+                        <option value="paid">ชำระแล้ว</option>
+                        <option value="overdue">เกินกำหนด</option>
+                        <option value="cancelled">ยกเลิก</option>
+                      </select>
+                    ) : (
+                      <div>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(payment.status)}`}>
+                          {getStatusIcon(payment.status)}
+                          <span className="ml-1">{getStatusText(payment.status)}</span>
+                        </span>
+                        {payment.status === 'overdue' && (
+                          <div className="text-xs text-red-600 mt-1">เกินกำหนดแล้ว</div>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {payment.notes || '-'}
+                    {editingPayment === payment.id ? (
+                      <input
+                        type="text"
+                        value={editForm.notes}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                        placeholder="หมายเหตุ"
+                        className="w-32 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    ) : (
+                      <div className="max-w-xs">
+                        <div className="text-sm text-gray-900">{payment.notes || '-'}</div>
+                        {payment.notes && payment.notes !== 'เงินดาวน์/งวดแรก' && (
+                          <div className="text-xs text-gray-500 mt-1">งวดที่ {index + 1}</div>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {loadingCollectors ? (
@@ -356,7 +477,12 @@ const PaymentScheduleTable = ({ installmentId, selectedBranch }) => {
                       <div className="mt-1 text-xs text-gray-500">
                         {(() => {
                           const selectedCollector = collectors.find(c => c.id === payment.collectorId);
-                          return selectedCollector ? `${selectedCollector.name} ${selectedCollector.surname}` : 'ไม่พบข้อมูล';
+                          return selectedCollector ? (
+                            <div>
+                              <div className="text-xs text-gray-700">{selectedCollector.name} {selectedCollector.surname}</div>
+                              <div className="text-xs text-blue-600">{selectedCollector.position}</div>
+                            </div>
+                          ) : 'ไม่พบข้อมูล';
                         })()}
                       </div>
                     )}
@@ -366,15 +492,7 @@ const PaymentScheduleTable = ({ installmentId, selectedBranch }) => {
                       <div className="flex items-center gap-2">
                         <Button
                           size="sm"
-                          onClick={() => handlePaymentUpdate(
-                            payment.id, 
-                            'paid', 
-                            new Date().toISOString().split('T')[0], 
-                            'ชำระเงิน',
-                            prompt('กรุณากรอกเลขที่ใบเสร็จ (ถ้ามี):') || '',
-                            prompt('กรุณากรอกจำนวนเงิน (ถ้าต้องการแก้ไข):') || payment.amount,
-                            prompt('กรุณากรอกวันที่ครบกำหนด (YYYY-MM-DD) (ถ้าต้องการแก้ไข):') || payment.dueDate
-                          )}
+                          onClick={() => handlePaymentUpdate(payment.id)}
                           className="bg-green-600 hover:bg-green-700"
                         >
                           บันทึก
@@ -382,19 +500,35 @@ const PaymentScheduleTable = ({ installmentId, selectedBranch }) => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setEditingPayment(null)}
+                          onClick={() => {
+                            setEditingPayment(null);
+                            setEditForm({
+                              status: 'pending',
+                              paymentDate: '',
+                              receiptNumber: '',
+                              amount: '',
+                              dueDate: '',
+                              notes: ''
+                            });
+                          }}
                         >
                           ยกเลิก
                         </Button>
                       </div>
                     ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setEditingPayment(payment.id)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
+                      <div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEditClick(payment)}
+                          className="mb-1"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <div className="text-xs text-gray-500">
+                          แก้ไขข้อมูล
+                        </div>
+                      </div>
                     )}
                   </td>
                 </tr>
