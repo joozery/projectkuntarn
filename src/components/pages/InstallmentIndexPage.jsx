@@ -322,7 +322,7 @@ const InstallmentIndexPage = ({ selectedBranch, currentBranch }) => {
 
         {/* Filters */}
         <div className="bg-white rounded-2xl shadow-xl p-6 mb-6 border border-gray-100">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Month Filter */}
             <div className="relative">
               <select
@@ -363,15 +363,6 @@ const InstallmentIndexPage = ({ selectedBranch, currentBranch }) => {
               <span className="font-semibold">ค้นหา</span>
             </button>
 
-            {/* Print Button */}
-            <button
-              onClick={handlePrint}
-              className="flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-xl hover:from-gray-600 hover:to-gray-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-            >
-              <Printer className="h-5 w-5" />
-              <span className="font-semibold">พิมพ์</span>
-            </button>
-
             {/* Entries Per Page */}
             <div className="flex items-center space-x-3 bg-gray-50 rounded-xl px-4 py-3">
               <span className="text-sm font-medium text-gray-700">Show</span>
@@ -387,15 +378,6 @@ const InstallmentIndexPage = ({ selectedBranch, currentBranch }) => {
               </select>
               <span className="text-sm font-medium text-gray-700">entries</span>
             </div>
-
-            {/* Export Excel Button */}
-            <button
-              onClick={handleExportExcel}
-              className="flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:from-green-600 hover:to-emerald-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-            >
-              <Download className="h-5 w-5" />
-              <span className="font-semibold">บันทึกเป็น Excel</span>
-            </button>
           </div>
         </div>
 

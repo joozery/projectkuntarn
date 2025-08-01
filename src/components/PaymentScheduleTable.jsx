@@ -119,12 +119,15 @@ const PaymentScheduleTable = ({ installmentId, selectedBranch }) => {
     }
   }, [loadPayments]);
 
-  const handlePaymentUpdate = async (paymentId, status, paymentDate = null, notes = '') => {
+  const handlePaymentUpdate = async (paymentId, status, paymentDate = null, notes = '', receiptNumber = '', amount = null, dueDate = null) => {
     try {
       const paymentData = {
         status,
         paymentDate: status === 'paid' ? paymentDate : null,
-        notes
+        notes,
+        receipt_number: receiptNumber,
+        amount: amount,
+        due_date: dueDate
       };
       
       await installmentsService.updatePayment(installmentId, paymentId, paymentData);
@@ -279,6 +282,9 @@ const PaymentScheduleTable = ({ installmentId, selectedBranch }) => {
                   วันชำระ
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  เลขที่ใบเสร็จ
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   สถานะ
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -313,6 +319,9 @@ const PaymentScheduleTable = ({ installmentId, selectedBranch }) => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString('th-TH') : '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {payment.receiptNumber || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(payment.status)}`}>
@@ -357,10 +366,18 @@ const PaymentScheduleTable = ({ installmentId, selectedBranch }) => {
                       <div className="flex items-center gap-2">
                         <Button
                           size="sm"
-                          onClick={() => handlePaymentUpdate(payment.id, 'paid', new Date().toISOString().split('T')[0], 'ชำระเงิน')}
+                          onClick={() => handlePaymentUpdate(
+                            payment.id, 
+                            'paid', 
+                            new Date().toISOString().split('T')[0], 
+                            'ชำระเงิน',
+                            prompt('กรุณากรอกเลขที่ใบเสร็จ (ถ้ามี):') || '',
+                            prompt('กรุณากรอกจำนวนเงิน (ถ้าต้องการแก้ไข):') || payment.amount,
+                            prompt('กรุณากรอกวันที่ครบกำหนด (YYYY-MM-DD) (ถ้าต้องการแก้ไข):') || payment.dueDate
+                          )}
                           className="bg-green-600 hover:bg-green-700"
                         >
-                          ชำระ
+                          บันทึก
                         </Button>
                         <Button
                           size="sm"
@@ -375,7 +392,6 @@ const PaymentScheduleTable = ({ installmentId, selectedBranch }) => {
                         size="sm"
                         variant="outline"
                         onClick={() => setEditingPayment(payment.id)}
-                        disabled={payment.status === 'paid'}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>

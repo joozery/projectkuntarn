@@ -988,7 +988,7 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                                   {item.pBlack && item.pBlack !== 0 ? (
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-black text-white">
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue text-blue-600">
                                       {item.pBlack}
                                     </span>
                                   ) : '-'}
