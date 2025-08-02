@@ -439,7 +439,7 @@ const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack, 
                     <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="flex items-center gap-1">
                         <Phone className="w-3 h-3 text-gray-400" />
-                        {customer.phone1 || customer.phone2 || customer.phone3 || '-'}
+                        {customer.primary_phone || customer.phone1 || customer.phone2 || customer.phone3 || '-'}
                       </div>
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">

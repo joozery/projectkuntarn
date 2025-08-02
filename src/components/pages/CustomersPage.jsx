@@ -815,25 +815,27 @@ const CustomersPage = ({ selectedBranch, currentBranch }) => {
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="space-y-1">
-                        {customer.phone1 && (
+                        {customer.primary_phone ? (
+                          <div className="flex items-center gap-1">
+                            <Phone className="w-3 h-3 text-green-600" />
+                            <span>{customer.primary_phone}</span>
+                          </div>
+                        ) : customer.phone1 ? (
                           <div className="flex items-center gap-1">
                             <Phone className="w-3 h-3 text-green-600" />
                             <span>{customer.phone1}</span>
                           </div>
-                        )}
-                        {customer.phone2 && (
+                        ) : customer.phone2 ? (
                           <div className="flex items-center gap-1 text-gray-600">
                             <Phone className="w-3 h-3 text-blue-600" />
                             <span>{customer.phone2}</span>
                           </div>
-                        )}
-                        {customer.phone3 && (
+                        ) : customer.phone3 ? (
                           <div className="flex items-center gap-1 text-gray-500">
                             <Phone className="w-3 h-3 text-purple-600" />
                             <span>{customer.phone3}</span>
                           </div>
-                        )}
-                        {!customer.phone1 && !customer.phone2 && !customer.phone3 && (
+                        ) : (
                           <span className="text-gray-400">-</span>
                         )}
                       </div>
