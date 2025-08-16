@@ -8,7 +8,9 @@ const AdminLayout = ({
   branches,
   setBranches,
   selectedBranch,
-  setSelectedBranch
+  setSelectedBranch,
+  currentUser,
+  onLogout
 }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -49,6 +51,8 @@ const AdminLayout = ({
           selectedBranch={selectedBranch}
           setSelectedBranch={setSelectedBranch}
           currentBranch={currentBranch}
+          currentUser={currentUser}
+          onLogout={onLogout}
         />
         
         <AdminContent 

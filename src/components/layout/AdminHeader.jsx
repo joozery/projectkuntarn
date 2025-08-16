@@ -9,7 +9,9 @@ import {
   Settings,
   MapPin,
   ChevronDown,
-  Building2
+  Building2,
+  LogOut,
+  Shield
 } from 'lucide-react';
 
 const AdminHeader = ({ 
@@ -18,9 +20,12 @@ const AdminHeader = ({
   branches, 
   selectedBranch, 
   setSelectedBranch, 
-  currentBranch 
+  currentBranch,
+  currentUser,
+  onLogout
 }) => {
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
 
   const handleBranchChange = (branchId) => {
     setSelectedBranch(branchId);
@@ -108,14 +113,88 @@ const AdminHeader = ({
             <Settings className="w-5 h-5" />
           </Button>
           
-          <div className="flex items-center gap-3 pl-3 border-l border-gray-200">
-            <div className="text-right">
-              <div className="text-sm font-medium text-gray-800">ผู้ดูแลระบบ</div>
-              <div className="text-xs text-gray-500">{currentBranch?.name}</div>
-            </div>
-            <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full flex items-center justify-center">
-              <User className="w-4 h-4 text-white" />
-            </div>
+          <div className="relative">
+            <Button
+              variant="ghost"
+              onClick={() => setShowUserDropdown(!showUserDropdown)}
+              className="flex items-center gap-3 pl-3 border-l border-gray-200"
+            >
+              <div className="text-right">
+                <div className="text-sm font-medium text-gray-800">
+                  {currentUser?.full_name || currentUser?.username || 'ผู้ดูแลระบบ'}
+                </div>
+                <div className="text-xs text-gray-500 flex items-center gap-1">
+                  <Shield className="w-3 h-3" />
+                  {currentUser?.role === 'super_admin' ? 'Super Admin' : 
+                   currentUser?.role === 'admin' ? 'Admin' : 
+                   currentUser?.role === 'manager' ? 'Manager' : 'User'}
+                </div>
+              </div>
+              <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full flex items-center justify-center">
+                <span className="text-white font-medium text-sm">
+                  {(currentUser?.full_name || currentUser?.username || 'A').charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <ChevronDown className="w-4 h-4 text-gray-400" />
+            </Button>
+
+            <AnimatePresence>
+              {showUserDropdown && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute right-0 top-full mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50"
+                >
+                  <div className="px-4 py-3 border-b border-gray-100">
+                    <div className="font-medium text-gray-900">
+                      {currentUser?.full_name || currentUser?.username}
+                    </div>
+                    <div className="text-sm text-gray-500">{currentUser?.email}</div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      สาขา: {currentUser?.branch_name || currentBranch?.name || 'ทุกสาขา'}
+                    </div>
+                  </div>
+                  
+                  <div className="py-1">
+                    <button
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        // Navigate to profile page
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <User className="w-4 h-4" />
+                      โปรไฟล์
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        // Navigate to settings page
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <Settings className="w-4 h-4" />
+                      การตั้งค่า
+                    </button>
+                  </div>
+                  
+                  <div className="border-t border-gray-100 py-1">
+                    <button
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        onLogout();
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      ออกจากระบบ
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>

@@ -129,8 +129,89 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
               return dueDate.getMonth() + 1 === currentMonth && dueDate.getFullYear() === currentYear;
             });
             
-            if (currentMonthPayments.length > 0) {
-              // แสดงเฉพาะงวดที่ครบกำหนดชำระในเดือนปัจจุบัน
+            // ตรวจสอบว่าเป็นสัญญาใหม่หรือไม่ (ยังไม่มีการชำระเงินเลย)
+            const isNewContract = payments.every(p => p.status !== 'paid');
+            const hasUpcomingPayments = payments.some(payment => {
+              const dueDate = new Date(payment.dueDate);
+              return dueDate.getMonth() + 1 >= currentMonth && dueDate.getFullYear() >= currentYear;
+            });
+            
+            // แสดงสัญญาใหม่ที่ยังไม่ถึงกำหนดชำระงวดแรก หรือ งวดที่ครบกำหนดในเดือนปัจจุบัน
+            if (currentMonthPayments.length > 0 || (isNewContract && hasUpcomingPayments)) {
+              
+              // กรณีสัญญาใหม่ที่ยังไม่ถึงกำหนดชำระงวดแรก
+              if (isNewContract && hasUpcomingPayments && currentMonthPayments.length === 0) {
+                // หางวดแรกที่จะครบกำหนด
+                const nextPayment = payments
+                  .filter(payment => {
+                    const dueDate = new Date(payment.dueDate);
+                    return dueDate.getMonth() + 1 >= currentMonth && dueDate.getFullYear() >= currentYear;
+                  })
+                  .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0];
+                
+                if (nextPayment) {
+                  const dueDate = nextPayment.dueDate;
+                  const date = new Date(dueDate);
+                  
+                  // ใช้เดือนปัจจุบันสำหรับสัญญาใหม่
+                  const monthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+                  const monthName = new Date(currentYear, currentMonth - 1).toLocaleDateString('th-TH', { 
+                    year: 'numeric', 
+                    month: 'long' 
+                  });
+                  
+                  if (!monthly[monthKey]) {
+                    monthly[monthKey] = {
+                      monthName,
+                      monthKey,
+                      installments: [],
+                      totalAmount: 0,
+                      totalCollected: 0,
+                      totalRemaining: 0
+                    };
+                  }
+                  
+                  const amount = parseFloat(nextPayment.amount) || 0;
+                  const amountCollected = 0; // สัญญาใหม่ยังไม่ได้ชำระ
+                  const napheoBlue = 0; // ยังไม่ได้ชำระ
+                  const collectionDateStr = date.toLocaleDateString('th-TH');
+                  
+                  // สำหรับสัญญาใหม่ ไม่แสดง P เพราะยังไม่ถึงกำหนด
+                  const pStatus = { pBlack: 0, pBlue: 0 };
+                  
+                  console.log('New Contract Debug:', {
+                    contract: item.contractNumber,
+                    isNewContract: true,
+                    nextDueDate: dueDate,
+                    currentMonth: currentMonth,
+                    currentYear: currentYear,
+                    pStatus: pStatus
+                  });
+                  
+                  monthly[monthKey].installments.push({
+                    id: `${item.id}-${nextPayment.id}`,
+                    contract: item.contractNumber || `C${item.id}`,
+                    name: item.customerFullName || `${item.customerName || ''} ${item.customerSurname || ''}`.trim(),
+                    collectionDate: collectionDateStr,
+                    amountToCollect: amount,
+                    amountCollected: amountCollected,
+                    remainingDebt: actualRemainingDebt,
+                    napheoRed: 0,
+                    napheoBlue: napheoBlue,
+                    pBlack: pStatus.pBlack,
+                    pRed: 0,
+                    pBlue: pStatus.pBlue,
+                    paymentStatus: nextPayment.status,
+                    isNewContract: true // เพิ่ม flag เพื่อระบุว่าเป็นสัญญาใหม่
+                  });
+                  
+                  monthly[monthKey].totalAmount += amount;
+                  monthly[monthKey].totalCollected += amountCollected;
+                  monthly[monthKey].totalRemaining += actualRemainingDebt;
+                }
+              }
+              
+              // กรณีงวดที่ครบกำหนดชำระในเดือนปัจจุบัน
               for (const payment of currentMonthPayments) {
                 const dueDate = payment.dueDate;
                 const date = new Date(dueDate);

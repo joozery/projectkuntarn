@@ -18,7 +18,8 @@ import {
   RotateCcw,
   ClipboardList,
   Shield,
-  TrendingUp
+  TrendingUp,
+  Upload
 } from 'lucide-react';
 
 const AdminSidebar = ({ activeTab, setActiveTab, collapsed, setCollapsed, currentBranch }) => {
@@ -34,6 +35,8 @@ const AdminSidebar = ({ activeTab, setActiveTab, collapsed, setCollapsed, curren
     { id: 'salespeople', label: 'พนักงานเก็บเงิน', icon: Users },
     { id: 'checkers', label: 'เช็คเกอร์', icon: Shield },
     { id: 'sales-index', label: 'สารบัญการขาย', icon: TrendingUp },
+    { id: 'import-data', label: 'Import ข้อมูล', icon: Upload },
+    { id: 'admin-users', label: 'จัดการผู้ใช้งาน', icon: UserCheck },
     { id: 'settings', label: 'ตั้งค่า', icon: Settings }
   ];
 

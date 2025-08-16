@@ -9,6 +9,8 @@ import CheckerInstallmentReport from '@/components/pages/CheckerInstallmentRepor
 import SalesIndexPage from '@/components/pages/SalesIndexPage';
 import PaymentSchedulePage from '@/components/pages/PaymentSchedulePage';
 import InstallmentIndexPage from '@/components/pages/InstallmentIndexPage';
+import ImportDataPage from '@/components/pages/ImportDataPage';
+import AdminUsersPage from '@/components/pages/AdminUsersPage';
 
 import ContractsPage from '@/components/pages/ContractsPage';
 import PaymentsPage from '@/components/pages/PaymentsPage';
@@ -137,6 +139,19 @@ const AdminContent = ({
         return (
           <BranchesPage 
             selectedBranch={selectedBranch}
+          />
+        );
+      case 'import-data':
+        return (
+          <ImportDataPage 
+            onBack={() => window.history.back()}
+          />
+        );
+      case 'admin-users':
+        return (
+          <AdminUsersPage 
+            selectedBranch={selectedBranch}
+            currentBranch={currentBranch}
           />
         );
       case 'settings':
