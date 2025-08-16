@@ -41,7 +41,10 @@ const AdminUsersPage = ({ selectedBranch, currentBranch }) => {
     try {
       setLoading(true);
       const response = await adminUsersService.getAll(selectedBranch);
-      setUsers(response.data || []);
+      
+      // Handle new response format: {data: [...], total: 1}
+      const usersData = response.data || [];
+      setUsers(usersData);
     } catch (error) {
       console.error('Error loading admin users:', error);
       toast({

@@ -8,7 +8,14 @@ class AdminUsersService {
     try {
       const params = branchId ? { branch_id: branchId } : {};
       const response = await api.get('/admin-users', { params });
-      return response.data;
+      
+      // API response structure: {success: true, data: [...], total: 1}
+      // Return the data array directly for frontend compatibility
+      if (response.data.success && response.data.data) {
+        return { data: response.data.data, total: response.data.total };
+      } else {
+        return { data: [], total: 0 };
+      }
     } catch (error) {
       console.error('Error fetching admin users:', error);
       throw new Error('ไม่สามารถดึงข้อมูลผู้ใช้งานได้');
