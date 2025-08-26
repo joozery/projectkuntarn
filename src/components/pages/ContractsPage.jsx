@@ -23,6 +23,8 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [sortField, setSortField] = useState('contractNumber');
+  const [sortDirection, setSortDirection] = useState('asc');
   const [selectedContract, setSelectedContract] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -309,6 +311,68 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
     setEditingContractId(null);
   };
 
+  // ฟังก์ชันการเรียงลำดับ
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // ฟังก์ชันเรียงลำดับข้อมูล
+  const sortContracts = (contracts) => {
+    return [...contracts].sort((a, b) => {
+      let aValue = a[sortField];
+      let bValue = b[sortField];
+
+      // จัดการกับ null/undefined
+      if (aValue == null) aValue = '';
+      if (bValue == null) bValue = '';
+
+      // แปลงเป็น string สำหรับการเปรียบเทียบ
+      if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+      if (typeof bValue === 'string') bValue = bValue.toLowerCase();
+
+      // เรียงลำดับเลขสัญญาแบบพิเศษ (CT2401001, CT2401002, etc.)
+      if (sortField === 'contractNumber') {
+        // แยกตัวอักษรและตัวเลข
+        const aMatch = aValue.match(/^([A-Z]+)(\d+)$/);
+        const bMatch = bValue.match(/^([A-Z]+)(\d+)$/);
+        
+        if (aMatch && bMatch) {
+          const aPrefix = aMatch[1];
+          const bPrefix = bMatch[1];
+          const aNumber = parseInt(aMatch[2]);
+          const bNumber = parseInt(bMatch[2]);
+          
+          if (aPrefix === bPrefix) {
+            return sortDirection === 'asc' ? aNumber - bNumber : bNumber - aNumber;
+          }
+          return aPrefix.localeCompare(bPrefix);
+        }
+      }
+
+      // เรียงลำดับวันที่
+      if (sortField === 'contractDate') {
+        const aDate = new Date(aValue);
+        const bDate = new Date(bValue);
+        return sortDirection === 'asc' ? aDate - bDate : bDate - aDate;
+      }
+
+      // เรียงลำดับตัวเลข
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+
+      // เรียงลำดับข้อความ
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  };
+
   // ลบข้อมูลซ้ำกันก่อนกรอง
   const uniqueContracts = contracts.filter((contract, index, self) => 
     index === self.findIndex(c => c.id === contract.id)
@@ -322,6 +386,9 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
     const matchesStatus = statusFilter === 'all' || contract.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  // เรียงลำดับข้อมูลตามที่เลือก
+  const sortedContracts = sortContracts(filteredContracts);
 
   const statusOptions = [
     { value: 'all', label: 'ทั้งหมด' },
@@ -365,6 +432,13 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
                 (กรองแล้วจาก {contracts.length} สัญญา)
               </span>
             )}
+            <span className="text-blue-600">
+              | เรียงตาม: {sortField === 'contractNumber' ? 'เลขสัญญา' : 
+                           sortField === 'contractDate' ? 'วันที่' : 
+                           sortField === 'customerName' ? 'ลูกค้า' : 
+                           sortField === 'totalAmount' ? 'ราคา' : 'ไม่ระบุ'} 
+              ({sortDirection === 'asc' ? 'น้อย→มาก' : 'มาก→น้อย'})
+            </span>
           </div>
           <Button 
             onClick={() => {
@@ -399,6 +473,26 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
             {statusOptions.map(option => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
+          </select>
+          
+          {/* ตัวเลือกการเรียงลำดับ */}
+          <select
+            value={`${sortField}-${sortDirection}`}
+            onChange={(e) => {
+              const [field, direction] = e.target.value.split('-');
+              setSortField(field);
+              setSortDirection(direction);
+            }}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          >
+            <option value="contractNumber-asc">เลขสัญญา: น้อย → มาก</option>
+            <option value="contractNumber-desc">เลขสัญญา: มาก → น้อย</option>
+            <option value="contractDate-asc">วันที่: เก่า → ใหม่</option>
+            <option value="contractDate-desc">วันที่: ใหม่ → เก่า</option>
+            <option value="customerName-asc">ลูกค้า: ก-ฮ</option>
+            <option value="customerName-desc">ลูกค้า: ฮ-ก</option>
+            <option value="totalAmount-asc">ราคา: ต่ำ → สูง</option>
+            <option value="totalAmount-desc">ราคา: สูง → ต่ำ</option>
           </select>
         </div>
       </div>
@@ -441,11 +535,14 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
         
         <div className="p-6">
           <ContractsTable
-            contracts={filteredContracts}
+            contracts={sortedContracts}
             onPrint={printContract}
             onView={handleViewContract}
             onEdit={handleEditContract}
             onDelete={handleDeleteContract}
+            sortField={sortField}
+            sortDirection={sortDirection}
+            onSort={handleSort}
           />
         </div>
       </div>

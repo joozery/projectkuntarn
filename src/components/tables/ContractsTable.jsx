@@ -9,10 +9,12 @@ import {
   Trash2,
   CheckCircle,
   Clock,
-  AlertCircle
+  AlertCircle,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 
-const ContractsTable = ({ contracts, onPrint, onView, onEdit, onDelete }) => {
+const ContractsTable = ({ contracts, onPrint, onView, onEdit, onDelete, sortField, sortDirection, onSort }) => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'active': return 'bg-green-100 text-green-800';
@@ -40,6 +42,16 @@ const ContractsTable = ({ contracts, onPrint, onView, onEdit, onDelete }) => {
     }
   };
 
+  // ฟังก์ชันแสดงไอคอนการเรียงลำดับ
+  const getSortIcon = (field) => {
+    if (sortField !== field) {
+      return <ChevronUp className="w-4 h-4 text-gray-400" />;
+    }
+    return sortDirection === 'asc' ? 
+      <ChevronUp className="w-4 h-4 text-blue-600" /> : 
+      <ChevronDown className="w-4 h-4 text-blue-600" />;
+  };
+
   if (contracts.length === 0) {
     return (
       <div className="text-center py-12">
@@ -55,9 +67,33 @@ const ContractsTable = ({ contracts, onPrint, onView, onEdit, onDelete }) => {
       <table className="w-full">
         <thead>
           <tr className="border-b border-gray-200">
-            <th className="text-left py-3 px-4 font-medium text-gray-700">เลขสัญญา</th>
-            <th className="text-left py-3 px-4 font-medium text-gray-700">วันที่</th>
-            <th className="text-left py-3 px-4 font-medium text-gray-700">ลูกค้า</th>
+            <th 
+              className="text-left py-3 px-4 font-medium text-gray-700 cursor-pointer hover:bg-gray-50 select-none"
+              onClick={() => onSort && onSort('contractNumber')}
+            >
+              <div className="flex items-center gap-2">
+                เลขสัญญา
+                {getSortIcon('contractNumber')}
+              </div>
+            </th>
+            <th 
+              className="text-left py-3 px-4 font-medium text-gray-700 cursor-pointer hover:bg-gray-50 select-none"
+              onClick={() => onSort && onSort('contractDate')}
+            >
+              <div className="flex items-center gap-2">
+                วันที่
+                {getSortIcon('contractDate')}
+              </div>
+            </th>
+            <th 
+              className="text-left py-3 px-4 font-medium text-gray-700 cursor-pointer hover:bg-gray-50 select-none"
+              onClick={() => onSort && onSort('customerName')}
+            >
+              <div className="flex items-center gap-2">
+                ลูกค้า
+                {getSortIcon('customerName')}
+              </div>
+            </th>
             <th className="text-left py-3 px-4 font-medium text-gray-700">สินค้า</th>
             <th className="text-left py-3 px-4 font-medium text-gray-700">ผ่อน/เดือน</th>
             <th className="text-left py-3 px-4 font-medium text-gray-700 w-48">พนักงาน</th>

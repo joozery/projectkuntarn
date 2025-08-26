@@ -1,7 +1,7 @@
 // Test script for admin-users API
 const axios = require('axios');
 
-const API_BASE_URL = 'https://backendkuntarn-e0ddf979d118.herokuapp.com/api';
+const API_BASE_URL = 'https://kuntran-backend-api-86c9bb65f6fb.herokuapp.com/api';
 
 async function testAdminUsersAPI() {
   try {

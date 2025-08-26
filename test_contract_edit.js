@@ -10,7 +10,7 @@ async function testContractEdit() {
   console.log('1. Testing installmentsService.getById...');
   try {
     // Simulate the service call
-    const response = await fetch(`https://backendkuntarn-e0ddf979d118.herokuapp.com/api/installments/${contractId}`);
+    const response = await fetch(`https://kuntran-backend-api-86c9bb65f6fb.herokuapp.com/api/installments/${contractId}`);
     console.log('✅ API Response status:', response.status);
     
     if (response.ok) {
@@ -50,7 +50,7 @@ async function testContractEdit() {
   // Test 3: Test data mapping
   console.log('\n3. Testing data mapping...');
   try {
-    const response = await fetch(`https://backendkuntarn-e0ddf979d118.herokuapp.com/api/installments/${contractId}`);
+    const response = await fetch(`https://kuntran-backend-api-86c9bb65f6fb.herokuapp.com/api/installments/${contractId}`);
     if (response.ok) {
       const data = await response.json();
       const contract = data.data;
@@ -86,7 +86,7 @@ async function testContractEdit() {
   // Test 4: Test all available contracts
   console.log('\n4. Testing all available contracts...');
   try {
-    const response = await fetch('https://backendkuntarn-e0ddf979d118.herokuapp.com/api/installments');
+    const response = await fetch('https://kuntran-backend-api-86c9bb65f6fb.herokuapp.com/api/installments');
     if (response.ok) {
       const data = await response.json();
       const contracts = data.data || [];

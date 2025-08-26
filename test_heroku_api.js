@@ -9,7 +9,7 @@ async function testHerokuAPI() {
   // Test health endpoint
   console.log('1. Testing Heroku health endpoint...');
   try {
-    const healthResponse = await fetch('https://backendkuntarn-e0ddf979d118.herokuapp.com/api/health');
+    const healthResponse = await fetch('https://kuntran-backend-api-86c9bb65f6fb.herokuapp.com/api/health');
     console.log('✅ Health status:', healthResponse.status);
     
     if (healthResponse.ok) {
@@ -25,7 +25,7 @@ async function testHerokuAPI() {
   // Test installments endpoint
   console.log('\n2. Testing Heroku installments endpoint...');
   try {
-    const installmentsResponse = await fetch('https://backendkuntarn-e0ddf979d118.herokuapp.com/api/installments');
+    const installmentsResponse = await fetch('https://kuntran-backend-api-86c9bb65f6fb.herokuapp.com/api/installments');
     console.log('✅ Installments status:', installmentsResponse.status);
     
     if (installmentsResponse.ok) {
@@ -48,7 +48,7 @@ async function testHerokuAPI() {
   // Test specific contract
   console.log(`\n3. Testing Heroku contract ${contractId}...`);
   try {
-    const contractResponse = await fetch(`https://backendkuntarn-e0ddf979d118.herokuapp.com/api/installments/${contractId}`);
+    const contractResponse = await fetch(`https://kuntran-backend-api-86c9bb65f6fb.herokuapp.com/api/installments/${contractId}`);
     console.log('✅ Contract status:', contractResponse.status);
     
     if (contractResponse.ok) {
@@ -73,7 +73,7 @@ async function testHerokuAPI() {
   // Test checkers endpoint
   console.log('\n4. Testing Heroku checkers endpoint...');
   try {
-    const checkersResponse = await fetch('https://backendkuntarn-e0ddf979d118.herokuapp.com/api/checkers?branchId=1');
+    const checkersResponse = await fetch('https://kuntran-backend-api-86c9bb65f6fb.herokuapp.com/api/checkers?branchId=1');
     console.log('✅ Checkers status:', checkersResponse.status);
     
     if (checkersResponse.ok) {

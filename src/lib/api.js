@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // API Configuration
-const API_BASE_URL = 'https://backendkuntarn-e0ddf979d118.herokuapp.com/api';
+const API_BASE_URL = 'https://kuntran-backend-api-86c9bb65f6fb.herokuapp.com/api';
 
 // Create axios instance
 const api = axios.create({
