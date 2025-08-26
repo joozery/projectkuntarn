@@ -14,7 +14,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(15);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
   const [editingProduct, setEditingProduct] = useState(null);
   const [contracts, setContracts] = useState([]);
 
@@ -60,7 +60,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
     };
 
     loadData();
-  }, [selectedBranch, currentPage]);
+  }, [selectedBranch, currentPage, itemsPerPage]);
 
   const loadContracts = async () => {
     try {
@@ -96,6 +96,11 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
+
+  // Reset to first page when page size changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [itemsPerPage]);
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
@@ -570,8 +575,22 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
       {filteredProducts.length > itemsPerPage && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-700">
-              แสดง {indexOfFirstItem + 1} ถึง {Math.min(indexOfLastItem, filteredProducts.length)} จาก {filteredProducts.length} รายการ
+            <div className="flex items-center gap-3">
+              <div className="text-sm text-gray-700">
+                แสดง {indexOfFirstItem + 1} ถึง {Math.min(indexOfLastItem, filteredProducts.length)} จาก {filteredProducts.length} รายการ
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-gray-600">ต่อหน้า:</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => setItemsPerPage(parseInt(e.target.value))}
+                  className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  {[10, 15, 20, 25, 50, 100].map(size => (
+                    <option key={size} value={size}>{size}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -592,7 +611,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                   if (
                     pageNumber === 1 ||
                     pageNumber === totalPages ||
-                    (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                    (pageNumber >= currentPage - 2 && pageNumber <= currentPage + 2)
                   ) {
                     return (
                       <Button
@@ -606,8 +625,8 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                       </Button>
                     );
                   } else if (
-                    pageNumber === currentPage - 2 ||
-                    pageNumber === currentPage + 2
+                    pageNumber === currentPage - 3 ||
+                    pageNumber === currentPage + 3
                   ) {
                     return (
                       <span key={pageNumber} className="px-2 text-gray-500">
