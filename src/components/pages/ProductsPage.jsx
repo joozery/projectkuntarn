@@ -430,7 +430,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <Package className="w-4 h-4" />
-          <span>สินค้าทั้งหมด: {products.length} รายการ</span>
+          <span>สินค้าทั้งหมด: {effectiveTotal} รายการ</span>
         </div>
       </div>
 
