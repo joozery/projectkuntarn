@@ -15,7 +15,10 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [totalItems, setTotalItems] = useState(0);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [totalPagesFromApi, setTotalPagesFromApi] = useState(0);
+  const [pageInput, setPageInput] = useState('1');
   const [contracts, setContracts] = useState([]);
 
 
@@ -35,6 +38,14 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
         });
         
         if (response.data.success) {
+          // total items/pages from backend
+          const total = response.data.total 
+            || response.data.pagination?.totalItems 
+            || response.data.count 
+            || 0;
+          if (total) setTotalItems(total);
+          const apiPages = response.data.pagination?.totalPages || 0;
+          if (apiPages) setTotalPagesFromApi(apiPages);
           // Get product names from installments table
           const productsWithNames = response.data.data.map(product => {
             // Find matching contract to get product name
@@ -86,11 +97,14 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
     (product.contract_number && product.contract_number.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Pagination logic
+  // Pagination logic (prefer backend total when available)
+  const effectiveTotal = searchTerm ? filteredProducts.length : (totalItems || filteredProducts.length);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentProducts = filteredProducts.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  const currentProducts = filteredProducts; // server returns a page already
+  const totalPages = searchTerm 
+    ? Math.ceil(Math.max(effectiveTotal, 1) / itemsPerPage)
+    : (totalPagesFromApi || Math.ceil(Math.max(effectiveTotal, 1) / itemsPerPage));
 
   // Reset to first page when search term changes
   useEffect(() => {
@@ -102,9 +116,20 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
     setCurrentPage(1);
   }, [itemsPerPage]);
 
+  // Sync page input with current/total changes
+  useEffect(() => {
+    setPageInput(String(currentPage));
+  }, [currentPage]);
+
   const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
+    const clamped = Math.max(1, Math.min(totalPages || 1, pageNumber));
+    setCurrentPage(clamped);
   };
+
+  const handleFirst = () => handlePageChange(1);
+  const handleLast = () => handlePageChange(totalPages || 1);
+  const handlePrev = () => handlePageChange(currentPage - 1);
+  const handleNext = () => handlePageChange(currentPage + 1);
 
   const handleContractClick = (contractNumber) => {
     // แสดง Swal confirmation ก่อนไปหน้าของเช็คเกอร์
@@ -174,6 +199,10 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
         });
         
         if (reloadResponse.data.success) {
+          const total = reloadResponse.data.total || reloadResponse.data.pagination?.totalItems || reloadResponse.data.count || 0;
+          if (total) setTotalItems(total);
+          const apiPages = reloadResponse.data.pagination?.totalPages || 0;
+          if (apiPages) setTotalPagesFromApi(apiPages);
           // Get product names from installments table
           const productsWithNames = reloadResponse.data.data.map(product => {
             // Find matching contract to get product name
@@ -240,6 +269,10 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
           });
           
           if (reloadResponse.data.success) {
+            const total = reloadResponse.data.total || reloadResponse.data.pagination?.totalItems || reloadResponse.data.count || 0;
+            if (total) setTotalItems(total);
+            const apiPages = reloadResponse.data.pagination?.totalPages || 0;
+            if (apiPages) setTotalPagesFromApi(apiPages);
             // Get product names from installments table
             const productsWithNames = reloadResponse.data.data.map(product => {
               // Find matching contract to get product name
@@ -308,6 +341,10 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
         });
         
         if (reloadResponse.data.success) {
+          const total = reloadResponse.data.total || reloadResponse.data.pagination?.totalItems || reloadResponse.data.count || 0;
+          if (total) setTotalItems(total);
+          const apiPages = reloadResponse.data.pagination?.totalPages || 0;
+          if (apiPages) setTotalPagesFromApi(apiPages);
           // Get product names from installments table
           const productsWithNames = reloadResponse.data.data.map(product => {
             // Find matching contract to get product name
@@ -572,12 +609,12 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
       </div>
 
       {/* Pagination */}
-      {filteredProducts.length > itemsPerPage && (
+      {totalPages > 1 && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="text-sm text-gray-700">
-                แสดง {indexOfFirstItem + 1} ถึง {Math.min(indexOfLastItem, filteredProducts.length)} จาก {filteredProducts.length} รายการ
+                แสดง {indexOfFirstItem + 1} ถึง {Math.min(indexOfLastItem, effectiveTotal)} จาก {effectiveTotal} รายการ
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-gray-600">ต่อหน้า:</span>
@@ -593,61 +630,58 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="flex items-center gap-1"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                ก่อนหน้า
+              {/* First/Prev */}
+              <Button variant="outline" size="sm" onClick={handleFirst} disabled={currentPage === 1}>
+                ≪ First
               </Button>
-              
+              <Button variant="outline" size="sm" onClick={handlePrev} disabled={currentPage === 1} className="flex items-center gap-1">
+                <ChevronLeft className="w-4 h-4" /> Back
+              </Button>
+
+              {/* Page list with ellipsis */}
               <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }, (_, index) => {
-                  const pageNumber = index + 1;
-                  // Show first page, last page, current page, and pages around current page
-                  if (
-                    pageNumber === 1 ||
-                    pageNumber === totalPages ||
-                    (pageNumber >= currentPage - 2 && pageNumber <= currentPage + 2)
-                  ) {
-                    return (
-                      <Button
-                        key={pageNumber}
-                        variant={pageNumber === currentPage ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => handlePageChange(pageNumber)}
-                        className="w-8 h-8 p-0"
-                      >
-                        {pageNumber}
-                      </Button>
-                    );
-                  } else if (
-                    pageNumber === currentPage - 3 ||
-                    pageNumber === currentPage + 3
-                  ) {
-                    return (
-                      <span key={pageNumber} className="px-2 text-gray-500">
-                        ...
-                      </span>
-                    );
+                {(() => {
+                  const pages = [];
+                  const max = totalPages;
+                  const addBtn = (p) => pages.push(
+                    <Button key={p} variant={p === currentPage ? 'default' : 'outline'} size="sm" onClick={() => handlePageChange(p)} className="w-8 h-8 p-0">{p}</Button>
+                  );
+                  const addDots = (k) => pages.push(<span key={k} className="px-2 text-gray-500">…</span>);
+
+                  if (max <= 9) {
+                    for (let p = 1; p <= max; p++) addBtn(p);
+                  } else {
+                    addBtn(1);
+                    if (currentPage > 4) addDots('s');
+                    const start = Math.max(2, currentPage - 2);
+                    const end = Math.min(max - 1, currentPage + 2);
+                    for (let p = start; p <= end; p++) addBtn(p);
+                    if (currentPage < max - 3) addDots('e');
+                    addBtn(max);
                   }
-                  return null;
-                })}
+                  return pages;
+                })()}
               </div>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="flex items-center gap-1"
-              >
-                ถัดไป
-                <ChevronRight className="w-4 h-4" />
+
+              {/* Next/Last */}
+              <Button variant="outline" size="sm" onClick={handleNext} disabled={currentPage === totalPages} className="flex items-center gap-1">
+                Next <ChevronRight className="w-4 h-4" />
               </Button>
+              <Button variant="outline" size="sm" onClick={handleLast} disabled={currentPage === totalPages}>
+                Last ≫
+              </Button>
+
+              {/* Page input */}
+              <div className="flex items-center gap-2 ml-2 text-sm">
+                <span>Page</span>
+                <input
+                  value={pageInput}
+                  onChange={(e) => setPageInput(e.target.value.replace(/[^0-9]/g, ''))}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handlePageChange(parseInt(pageInput || '1')); }}
+                  className="w-16 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+                <Button variant="outline" size="sm" onClick={() => handlePageChange(parseInt(pageInput || '1'))}>Go</Button>
+              </div>
             </div>
           </div>
         </div>
