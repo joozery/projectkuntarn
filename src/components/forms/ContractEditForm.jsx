@@ -898,26 +898,49 @@ const ContractEditForm = ({
         <FormSection title="รายละเอียดสินค้าและแผนการผ่อน" icon={Package}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {console.log('🔍 Rendering product section - contractForm.productId:', contractForm.productId, 'allInventory length:', allInventory.length)}
-            {console.log('🔍 Available inventory items:', allInventory.filter(item => item.status === 'active' && Number(item.remaining_quantity1) > 0).map(item => ({ id: item.id, product_name: item.product_name })))}
-            <SearchableSelectField 
-              label="ชนิดสินค้า" 
-              value={contractForm.productId} 
-              onChange={(e) => handleSelectChange('productId', e.target.value)} 
-              options={allInventory
-                .filter(item => item.status === 'active' && Number(item.remaining_quantity1) > 0)
-                .map(item => {
-                  console.log('🔍 Inventory item:', item.id, 'product_name:', item.product_name);
-                  
-                  return {
+            
+            {/* สร้าง product options ที่รวมสินค้าที่บันทึกไว้ด้วย */}
+            {(() => {
+              // สินค้าที่ active และมี stock
+              const activeInventory = allInventory.filter(item => 
+                item.status === 'active' && Number(item.remaining_quantity1) > 0
+              );
+              
+              // สินค้าที่บันทึกไว้ในสัญญา (แม้จะไม่อยู่ใน active)
+              const selectedProduct = allInventory.find(item => 
+                String(item.id) === String(contractForm.productId)
+              );
+              
+              console.log('🔍 Product selection debug:');
+              console.log('  - contractForm.productId:', contractForm.productId);
+              console.log('  - selectedProduct:', selectedProduct);
+              console.log('  - activeInventory count:', activeInventory.length);
+              console.log('  - allInventory count:', allInventory.length);
+              
+              // รวม options โดยให้สินค้าที่บันทึกไว้อยู่ข้างหน้า
+              const productOptions = selectedProduct && !activeInventory.some(item => 
+                String(item.id) === String(selectedProduct.id)
+              ) 
+                ? [selectedProduct, ...activeInventory]
+                : activeInventory;
+              
+              console.log('🔍 Product options:', productOptions.map(item => ({ id: item.id, product_name: item.product_name, status: item.status })));
+              
+              return (
+                <SearchableSelectField 
+                  label="ชนิดสินค้า" 
+                  value={contractForm.productId} 
+                  onChange={(e) => handleSelectChange('productId', e.target.value)} 
+                  options={productOptions.map(item => ({
                     ...item,
                     displayName: item.product_name || item.name || '',
                     searchText: `${item.product_name || ''} ${item.product_code || ''}`.trim()
-                  };
-                })
-              } 
-              placeholder={loadingInventory ? "กำลังโหลดข้อมูล..." : "--พิมพ์ค้นหาสินค้า--"} 
-              required
-            />
+                  }))}
+                  placeholder={loadingInventory ? "กำลังโหลดข้อมูล..." : "--พิมพ์ค้นหาสินค้า--"} 
+                  required
+                />
+              );
+            })()}
             <InputField label="ราคารวม" value={contractForm.productDetails.price} onChange={(e) => handleDetailChange('productDetails', 'price', e.target.value)} placeholder="ราคารวม" type="number" />
             <InputField label="รุ่น" value={contractForm.productDetails.model} onChange={(e) => handleDetailChange('productDetails', 'model', e.target.value)} placeholder="รุ่น"/>
             <InputField label="S/N" value={contractForm.productDetails.serialNumber} onChange={(e) => handleDetailChange('productDetails', 'serialNumber', e.target.value)} placeholder="Serial Number"/>
@@ -947,16 +970,42 @@ const ContractEditForm = ({
               placeholder={loadingCheckers ? "กำลังโหลดข้อมูล..." : "--เลือกผู้ตรวจสอบ--"} 
               required
             />
-            {console.log('🔍 Rendering collector section - contractForm.collectorId:', contractForm.collectorId, 'contractForm.line:', contractForm.line, 'allCollectors length:', allCollectors.length)}
-            {console.log('🔍 Available collectors:', allCollectors.map(emp => ({ id: emp.id, name: emp.name, position: emp.position, code: emp.code })))}
-            <SearchableSelectField 
-              label="สาย" 
-              value={contractForm.collectorId} 
-              onChange={(e) => handleSelectChange('collectorId', e.target.value)} 
-              options={allCollectors} 
-              placeholder={loadingCollectors ? "กำลังโหลดข้อมูล..." : "--เลือกสาย--"} 
-              required
-            />
+            {/* สร้าง collector options ที่รวมสายที่บันทึกไว้ด้วย */}
+            {(() => {
+              // หาสายที่บันทึกไว้ในสัญญา (แม้จะไม่อยู่ในรายการปัจจุบัน)
+              const selectedCollector = allCollectors.find(emp => 
+                String(emp.id) === String(contractForm.collectorId) ||
+                emp.code === contractForm.line ||
+                emp.name === contractForm.line ||
+                emp.full_name === contractForm.line
+              );
+              
+              console.log('🔍 Collector selection debug:');
+              console.log('  - contractForm.collectorId:', contractForm.collectorId);
+              console.log('  - contractForm.line:', contractForm.line);
+              console.log('  - selectedCollector:', selectedCollector);
+              console.log('  - allCollectors count:', allCollectors.length);
+              
+              // รวม options โดยให้สายที่บันทึกไว้อยู่ข้างหน้า
+              const collectorOptions = selectedCollector && !allCollectors.some(emp => 
+                String(emp.id) === String(selectedCollector.id)
+              )
+                ? [selectedCollector, ...allCollectors]
+                : allCollectors;
+              
+              console.log('🔍 Collector options:', collectorOptions.map(emp => ({ id: emp.id, name: emp.name, position: emp.position, code: emp.code })));
+              
+              return (
+                <SearchableSelectField 
+                  label="สาย" 
+                  value={contractForm.collectorId} 
+                  onChange={(e) => handleSelectChange('collectorId', e.target.value)} 
+                  options={collectorOptions} 
+                  placeholder={loadingCollectors ? "กำลังโหลดข้อมูล..." : "--เลือกสาย--"} 
+                  required
+                />
+              );
+            })()}
           </div>
         </FormSection>
 

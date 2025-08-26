@@ -34,6 +34,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, collapsed, setCollapsed, curren
     { id: 'employees', label: 'พนักงานขาย', icon: UserCheck },
     { id: 'salespeople', label: 'พนักงานเก็บเงิน', icon: Users },
     { id: 'checkers', label: 'เช็คเกอร์', icon: Shield },
+    { id: 'all-checker-customers', label: 'ลูกค้าทุกเช็คเกอร์', icon: Users },
     { id: 'sales-index', label: 'สารบัญการขาย', icon: TrendingUp },
     { id: 'import-data', label: 'Import ข้อมูล', icon: Upload },
     { id: 'admin-users', label: 'จัดการผู้ใช้งาน', icon: UserCheck },

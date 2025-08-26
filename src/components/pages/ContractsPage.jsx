@@ -11,6 +11,7 @@ import { contractsService } from '@/services/contractsService';
 import { customersService } from '@/services/customersService';
 import { inventoryService } from '@/services/inventoryService';
 import { employeesService } from '@/services/employeesService';
+import { printContract } from '@/components/utils/contractPrint';
 import Swal from 'sweetalert2';
 
 const ContractsPage = ({ selectedBranch, currentBranch }) => {
@@ -185,15 +186,34 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
   };
 
   const printContract = (contract) => {
-    // Implement print functionality
-    console.log('Printing contract:', contract);
-    Swal.fire({
-      icon: 'info',
-      title: 'พิมพ์สัญญา',
-      text: 'ฟังก์ชันพิมพ์จะถูกเพิ่มในภายหลัง',
-      confirmButtonText: 'ตกลง',
-      confirmButtonColor: '#7c3aed'
-    });
+    try {
+      console.log('Printing contract:', contract);
+      
+      // Check if contract has required data
+      if (!contract.contractNumber) {
+        toast({
+          title: "ข้อมูลไม่ครบถ้วน",
+          description: "ไม่สามารถพิมพ์สัญญาได้ เนื่องจากข้อมูลไม่ครบถ้วน",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Call the print function
+      printContract(contract);
+      
+      toast({
+        title: "กำลังพิมพ์สัญญา",
+        description: `กำลังพิมพ์สัญญา ${contract.contractNumber}`,
+      });
+    } catch (error) {
+      console.error('Error printing contract:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถพิมพ์สัญญาได้",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleViewContract = (contract) => {

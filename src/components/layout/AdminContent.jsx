@@ -6,6 +6,7 @@ import EmployeesPage from '@/components/pages/EmployeesPage';
 import CollectorsPage from '@/components/pages/CollectorsPage';
 import CheckersPage from '@/components/pages/CheckersPage';
 import CheckerInstallmentReport from '@/components/pages/CheckerInstallmentReport';
+import AllCheckerCustomersPage from '@/components/pages/AllCheckerCustomersPage';
 import SalesIndexPage from '@/components/pages/SalesIndexPage';
 import PaymentSchedulePage from '@/components/pages/PaymentSchedulePage';
 import InstallmentIndexPage from '@/components/pages/InstallmentIndexPage';
@@ -69,6 +70,14 @@ const AdminContent = ({
       case 'checkers':
         return (
           <CheckersPage 
+            selectedBranch={selectedBranch}
+            currentBranch={currentBranch}
+            onViewPaymentSchedule={onViewPaymentSchedule}
+          />
+        );
+      case 'all-checker-customers':
+        return (
+          <AllCheckerCustomersPage 
             selectedBranch={selectedBranch}
             currentBranch={currentBranch}
             onViewPaymentSchedule={onViewPaymentSchedule}
