@@ -892,6 +892,106 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
     };
   };
 
+  // ฟังก์ชันปริ้นแบบสลิปแนวยาว (80mm)
+  const handlePrintSlip = () => {
+    const formatTH = (d) => d ? new Date(d).toLocaleDateString('th-TH') : '';
+    const paid = paidInstallments || [];
+    const getRow = (idx) => {
+      const p = paid[idx];
+      const receipt = p?.notes?.includes('ใบเสร็จ:') ? p.notes.split('ใบเสร็จ:')[1]?.split(',')[0]?.trim() : '';
+      const remaining = Math.max(0, (mappedCustomerInfo.totalPrice || 0) - paid.slice(0, idx + 1).reduce((s, x) => s + parseFloat(x.amount || 0), 0));
+      return `
+        <tr>
+          <td>${idx + 1}</td>
+          <td>${p ? formatTH(p.paymentDate) : ''}</td>
+          <td>${p ? receipt : ''}</td>
+          <td>${p ? Number(p.amount || 0).toLocaleString() : ''}</td>
+          <td>${p ? Number(remaining).toLocaleString() : ''}</td>
+        </tr>
+      `;
+    };
+    const makeTable = (start) => Array.from({ length: 15 }).map((_, i) => getRow(start + i)).join('');
+
+    const html = `
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>สลิปงวด: ${mappedCustomerInfo.contractNumber || ''}</title>
+        <style>
+          @page { size: 80mm auto; margin: 5mm; }
+          body { font-family: 'Sarabun', system-ui, sans-serif; color: #111; }
+          .sheet { width: 80mm; }
+          .header { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+          .brand { font-weight:800; font-size:14px; }
+          .addr { font-size:10px; color:#333; }
+          .row { display:flex; gap:4px; margin:2px 0; align-items:baseline; }
+          .label { width:22mm; font-weight:600; font-size:11px; }
+          .value { flex:1; font-size:11px; border-bottom:1px solid #999; padding-bottom:2px; }
+          .box { border:1px solid #666; padding:4px; margin-top:6px; }
+          .grid { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:6px; }
+          table { width:100%; border-collapse:collapse; }
+          th, td { border:1px solid #999; font-size:10px; padding:3px; text-align:center; }
+          th { background:#f6f6f6; }
+        </style>
+      </head>
+      <body onload="window.print(); setTimeout(() => window.close(), 300);">
+        <div class="sheet">
+          <div class="header">
+            <div>
+              <div class="brand">เอฟซี เฟอร์นิเจอร์</div>
+              <div class="addr">116 หมู่ 3 ต.ห้วงน้อย อ.เมือง จ.ประจวบคีรีขันธ์ 77000</div>
+              <div class="addr">โทร. 092-2856965</div>
+            </div>
+            <div style="font-size:10px;">เลขที่: ${mappedCustomerInfo.contractNumber || '-'}</div>
+          </div>
+
+          <div class="box">
+            <div class="row"><div class="label">ชื่อลูกค้า</div><div class="value">${mappedCustomerInfo.name} โทร ${mappedCustomerInfo.phone || ''}</div></div>
+            <div class="row"><div class="label">ที่อยู่</div><div class="value">${mappedCustomerInfo.address || ''}</div></div>
+            <div class="row"><div class="label">ผู้ค้ำ</div><div class="value">${mappedCustomerInfo.guarantorName || ''} โทร ${mappedCustomerInfo.guarantorPhone || ''}</div></div>
+            <div class="row"><div class="label">ที่อยู่ผู้ค้ำ</div><div class="value">${mappedCustomerInfo.guarantorAddress || ''}</div></div>
+          </div>
+
+          <div class="box">
+            <div class="row"><div class="label">ชนิดสินค้า</div><div class="value">${mappedCustomerInfo.productType || ''}</div></div>
+            <div class="row"><div class="label">ราคารวม</div><div class="value">${Number(mappedCustomerInfo.totalPrice || 0).toLocaleString()}</div></div>
+            <div class="row"><div class="label">ดาวน์</div><div class="value">${Number(mappedCustomerInfo.downPayment || 0).toLocaleString()}</div></div>
+            <div class="row"><div class="label">ผ่อน/เดือน</div><div class="value">${Number(mappedCustomerInfo.installmentAmount || 0).toLocaleString()}</div></div>
+            <div class="row"><div class="label">จำนวนงวด</div><div class="value">${mappedCustomerInfo.months || ''} เดือน</div></div>
+            <div class="row"><div class="label">เก็บทุกวันที่</div><div class="value">${mappedCustomerInfo.collectionDate || ''}</div></div>
+            <div class="row"><div class="label">วันที่ทำสัญญา</div><div class="value">${formatTH(customerInstallment?.startDate)}</div></div>
+          </div>
+
+          <div class="box">
+            <div class="grid">
+              <div>
+                <table>
+                  <thead>
+                    <tr><th>งวด</th><th>ว/ด/ป</th><th>เลขที่ใบเสร็จ</th><th>จำนวนเงิน</th><th>คงเหลือ</th></tr>
+                  </thead>
+                  <tbody>${makeTable(0)}</tbody>
+                </table>
+              </div>
+              <div>
+                <table>
+                  <thead>
+                    <tr><th>งวด</th><th>ว/ด/ป</th><th>เลขที่ใบเสร็จ</th><th>จำนวนเงิน</th><th>คงเหลือ</th></tr>
+                  </thead>
+                  <tbody>${makeTable(15)}</tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </body>
+    </html>`;
+
+    const w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
+  };
+
   const getStatusBadge = (status) => {
     const statusConfig = {
       paid: { label: 'ชำระแล้ว', className: 'bg-green-100 text-green-800', icon: CheckCircle },
@@ -954,6 +1054,14 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
                 >
                   <Printer className="w-4 h-4 mr-2" />
                   ปริ้นเอกสาร
+                </Button>
+                <Button
+                  onClick={handlePrintSlip}
+                  variant="outline"
+                  className="bg-white hover:bg-gray-50 border-gray-200 text-gray-700"
+                >
+                  <Printer className="w-4 h-4 mr-2" />
+                  พิมพ์สลิป 80mm
                 </Button>
                 {getStatusBadge(mappedCustomerInfo.status)}
               </div>
