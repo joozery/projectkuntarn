@@ -797,6 +797,12 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
                 <span class="info-label">สินค้า:</span> ${mappedCustomerInfo.productType}
               </div>
               <div class="info-item">
+                <span class="info-label">รุ่น:</span> ${mappedCustomerInfo.model || '-'}
+              </div>
+              <div class="info-item">
+                <span class="info-label">S/N:</span> ${mappedCustomerInfo.serialNumber || '-'}
+              </div>
+              <div class="info-item">
                 <span class="info-label">ราคารวม:</span> ฿${mappedCustomerInfo.totalPrice?.toLocaleString() || 'N/A'}
               </div>
               <div class="info-item">
