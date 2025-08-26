@@ -166,17 +166,52 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
     }
   };
 
+  // Helper: build a full address string from individual parts
+  const buildAddress = (
+    baseAddress,
+    moo,
+    road,
+    subdistrict,
+    district,
+    province
+  ) => {
+    const parts = [
+      (baseAddress || '').toString().trim(),
+      moo ? `หมู่ ${moo}` : '',
+      road ? `ถ.${road}` : '',
+      subdistrict ? `ต.${subdistrict}` : '',
+      district ? `อ.${district}` : '',
+      province ? `จ.${province}` : ''
+    ].filter(Boolean);
+    const full = parts.join(' ').trim();
+    return full || 'N/A';
+  };
+
   // Map API data to expected format
   const mappedCustomerInfo = customerInstallment ? {
     id: customerInstallment.customerId || customerInfo.id || customerInfo.code || 'N/A',
     name: customerInstallment.customerFullName || customerInfo.full_name || customerInfo.name || 'N/A',
     nickname: customerInstallment.customerNickname || customerInfo.nickname || 'N/A',
     phone: customerInstallment.customerPhone1 || customerInfo.phone1 || customerInfo.phone || 'N/A',
-    address: customerInstallment.customerAddress || customerInfo.address || 'N/A',
+    address: buildAddress(
+      customerInstallment.customerAddress || customerInfo.address,
+      customerInstallment.customerMoo || customerInfo.customer_moo,
+      customerInstallment.customerRoad || customerInfo.customer_road,
+      customerInstallment.customerSubdistrict || customerInfo.customer_subdistrict,
+      customerInstallment.customerDistrict || customerInfo.customer_district,
+      customerInstallment.customerProvince || customerInfo.customer_province
+    ),
     guarantorName: customerInstallment.guarantorName || customerInfo.guarantor_name || 'N/A',
     guarantorNickname: customerInstallment.guarantorNickname || customerInfo.guarantor_nickname || 'N/A',
     guarantorPhone: customerInstallment.guarantorPhone1 || customerInfo.guarantor_phone || 'N/A',
-    guarantorAddress: customerInstallment.guarantorAddress || customerInfo.guarantor_address || 'N/A',
+    guarantorAddress: buildAddress(
+      customerInstallment.guarantorAddress || customerInfo.guarantor_address,
+      customerInstallment.guarantorMoo || customerInfo.guarantor_moo,
+      customerInstallment.guarantorRoad || customerInfo.guarantor_road,
+      customerInstallment.guarantorSubdistrict || customerInfo.guarantor_subdistrict,
+      customerInstallment.guarantorDistrict || customerInfo.guarantor_district,
+      customerInstallment.guarantorProvince || customerInfo.guarantor_province
+    ),
     productType: customerInstallment.productName || customerInfo.product_type || customerInfo.product_name || 'N/A',
     totalPrice: customerInstallment.totalAmount ? parseFloat(customerInstallment.totalAmount) : 0,
     model: customerInstallment.productModel || customerInfo.model || 'N/A',
@@ -195,11 +230,25 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
     name: customerInfo.full_name || customerInfo.name || 'N/A',
     nickname: customerInfo.nickname || 'N/A',
     phone: customerInfo.phone1 || customerInfo.phone || 'N/A',
-    address: customerInfo.address || 'N/A',
+    address: buildAddress(
+      customerInfo.address,
+      customerInfo.customer_moo,
+      customerInfo.customer_road,
+      customerInfo.customer_subdistrict,
+      customerInfo.customer_district,
+      customerInfo.customer_province
+    ),
     guarantorName: customerInfo.guarantor_name || 'N/A',
     guarantorNickname: customerInfo.guarantor_nickname || 'N/A',
     guarantorPhone: customerInfo.guarantor_phone || 'N/A',
-    guarantorAddress: customerInfo.guarantor_address || 'N/A',
+    guarantorAddress: buildAddress(
+      customerInfo.guarantor_address,
+      customerInfo.guarantor_moo,
+      customerInfo.guarantor_road,
+      customerInfo.guarantor_subdistrict,
+      customerInfo.guarantor_district,
+      customerInfo.guarantor_province
+    ),
     productType: customerInfo.product_type || customerInfo.product_name || 'N/A',
     totalPrice: customerInfo.total_contracts_amount ? parseFloat(customerInfo.total_contracts_amount) : 0,
     model: customerInfo.model || 'N/A',
