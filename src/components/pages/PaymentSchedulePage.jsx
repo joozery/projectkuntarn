@@ -920,8 +920,8 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
         <title>สลิปงวด: ${mappedCustomerInfo.contractNumber || ''}</title>
         <style>
           @page { size: 80mm auto; margin: 5mm; }
-          body { font-family: 'Sarabun', system-ui, sans-serif; color: #111; }
-          .sheet { width: 80mm; }
+          body { font-family: 'Sarabun', system-ui, sans-serif; color: #111; display: flex; justify-content: center; }
+          .sheet { width: 80mm; margin: 0 auto; }
           .header { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
           .brand { font-weight:800; font-size:14px; }
           .addr { font-size:10px; color:#333; }
