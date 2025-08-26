@@ -7,6 +7,7 @@ import ContractForm from '@/components/forms/ContractForm';
 import ContractEditForm from '@/components/forms/ContractEditForm';
 import ContractsTable from '@/components/tables/ContractsTable';
 import ContractDetailModal from '@/components/ContractDetailModal';
+import { printContractReceipt } from '@/components/utils/contractReceiptPrint';
 import { contractsService } from '@/services/contractsService';
 import { customersService } from '@/services/customersService';
 import { inventoryService } from '@/services/inventoryService';
@@ -185,11 +186,8 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
     }
   };
 
-  const printContract = (contract) => {
+  const printContract = async (contract) => {
     try {
-      console.log('Printing contract:', contract);
-      
-      // Check if contract has required data
       if (!contract.contractNumber) {
         toast({
           title: "ข้อมูลไม่ครบถ้วน",
@@ -198,10 +196,19 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
         });
         return;
       }
-      
-      // Call the print function
-      printContract(contract);
-      
+
+      // Optional: load payments to fill the table
+      let payments = [];
+      try {
+        const res = await contractsService.getById(contract.id);
+        const data = res.data?.data || res.data || {};
+        payments = data.payments || [];
+      } catch (e) {
+        console.warn('⚠️ Unable to load payments, continue without.', e?.message);
+      }
+
+      printContractReceipt(contract, payments);
+
       toast({
         title: "กำลังพิมพ์สัญญา",
         description: `กำลังพิมพ์สัญญา ${contract.contractNumber}`,
