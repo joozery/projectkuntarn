@@ -241,8 +241,16 @@ const ContractEditForm = ({
 
   // Auto-fill product details when productId changes
   useEffect(() => {
+    console.log('🔍 Auto-fill effect triggered - productId:', contractForm.productId, 'allInventory length:', allInventory.length);
+    console.log('🔍 contractForm.productId type:', typeof contractForm.productId);
+    console.log('🔍 contractForm.productId value:', contractForm.productId);
+    
     if (contractForm.productId && allInventory.length > 0) {
       const selectedInventory = allInventory.find(item => item.id === parseInt(contractForm.productId));
+      console.log('🔍 Looking for productId:', contractForm.productId, 'in inventory');
+      console.log('🔍 Parsed productId:', parseInt(contractForm.productId));
+      console.log('🔍 Found inventory item:', selectedInventory);
+      
       if (selectedInventory) {
         console.log('🔍 Auto-filling product details for:', selectedInventory);
         setContractForm(prev => ({
@@ -253,7 +261,13 @@ const ContractEditForm = ({
             price: selectedInventory.cost_price ? selectedInventory.cost_price.toString() : ''
           }
         }));
+      } else {
+        console.log('⚠️ No inventory item found for productId:', contractForm.productId);
+        console.log('🔍 Available inventory IDs:', allInventory.map(item => item.id));
+        console.log('🔍 Available inventory items:', allInventory.map(item => ({ id: item.id, product_name: item.product_name })));
       }
+    } else {
+      console.log('⚠️ Cannot auto-fill: productId:', contractForm.productId, 'allInventory length:', allInventory.length);
     }
   }, [contractForm.productId, allInventory]);
 
@@ -268,6 +282,8 @@ const ContractEditForm = ({
         const response = await contractsService.getById(contractId);
         
         console.log('🔍 API Response:', response);
+        console.log('🔍 API Response status:', response.status);
+        console.log('🔍 API Response headers:', response.headers);
         
         let contract;
         if (response.data?.success) {
@@ -284,6 +300,10 @@ const ContractEditForm = ({
         console.log('🔍 Contract customerName:', contract?.customerName);
         console.log('🔍 Contract customerFullName:', contract?.customerFullName);
         console.log('🔍 Contract productName:', contract?.productName);
+        console.log('🔍 Contract productId:', contract?.productId);
+        console.log('🔍 Contract product_id:', contract?.product_id);
+        console.log('🔍 Contract line:', contract?.line);
+        console.log('🔍 Contract collectorId:', contract?.collectorId);
         console.log('🔍 Contract totalAmount:', contract?.totalAmount);
         console.log('🔍 Contract customerDetails:', contract?.customerDetails);
         console.log('🔍 Contract customerIdCard:', contract?.customerIdCard);
@@ -302,7 +322,7 @@ const ContractEditForm = ({
             customerDetails: {
               title: contract.customerDetails?.title || contract.customerTitle || 'นาย',
               name: contract.customerName || '',
-              surname: contract.customerSurname || '',
+              surname: contract.customerDetails?.surname || contract.customerSurname || '',
               nickname: contract.customerDetails?.nickname || contract.customerNickname || '',
               age: contract.customerDetails?.age || contract.customerAge || '',
               idCard: contract.customerDetails?.idCard || contract.customerIdCard || '',
@@ -336,7 +356,7 @@ const ContractEditForm = ({
               phone3: contract.guarantorDetails?.phone3 || contract.guarantorPhone3 || '',
               email: contract.guarantorDetails?.email || contract.guarantorEmail || ''
             },
-            productId: contract.productId || '',
+            productId: contract.productId || contract.product_id || '',
             productDetails: {
               name: contract.productName || '',
               description: contract.productDetails?.description || contract.productDescription || '',
@@ -366,10 +386,16 @@ const ContractEditForm = ({
           console.log('🔍 Mapped productDetails:', formData.productDetails);
           console.log('🔍 Mapped plan:', formData.plan);
           console.log('🔍 Contract productId:', contract.productId);
+          console.log('🔍 Contract product_id:', contract.product_id);
           console.log('🔍 Form productId:', formData.productId);
+          console.log('🔍 Contract line:', contract.line);
+          console.log('🔍 Form line:', formData.line);
           console.log('🔍 Contract contractDate:', contract.contractDate);
           console.log('🔍 Form contractDate:', formData.contractDate);
           console.log('🔍 Setting contractForm with:', formData);
+          console.log('🔍 Final formData.productId:', formData.productId);
+          console.log('🔍 Final formData.collectorId:', formData.collectorId);
+          console.log('🔍 Final formData.line:', formData.line);
           setContractForm(formData);
           console.log('✅ setContractForm called');
         }
@@ -398,24 +424,6 @@ const ContractEditForm = ({
     console.log('🔍 contractForm.productDetails.name:', contractForm.productDetails.name);
     console.log('🔍 contractForm.totalAmount:', contractForm.totalAmount);
   }, [contractForm]);
-
-  // Auto-fill product details when productId changes
-  useEffect(() => {
-    if (contractForm.productId && allInventory.length > 0) {
-      const selectedInventory = allInventory.find(item => item.id === parseInt(contractForm.productId));
-      if (selectedInventory) {
-        console.log('🔍 Auto-filling product details for:', selectedInventory);
-        setContractForm(prev => ({
-          ...prev,
-          productDetails: {
-            ...prev.productDetails,
-            name: selectedInventory.product_name || '',
-            price: selectedInventory.cost_price ? selectedInventory.cost_price.toString() : ''
-          }
-        }));
-      }
-    }
-  }, [contractForm.productId, allInventory]);
 
   // Load customers from API
   useEffect(() => {
@@ -461,6 +469,8 @@ const ContractEditForm = ({
         const response = await inventoryService.getAll({ branchId: selectedBranch });
         
         console.log('🔍 Inventory response:', response);
+        console.log('🔍 Inventory response status:', response.status);
+        console.log('🔍 Inventory response data:', response.data);
         
         let inventoryData = [];
         if (response.data?.success && Array.isArray(response.data.data)) {
@@ -472,6 +482,10 @@ const ContractEditForm = ({
         console.log('🔍 Processed inventory data:', inventoryData);
         console.log('🔍 All inventory items:', inventoryData.length);
         console.log('🔍 Active inventory items:', inventoryData.filter(item => item.status === 'active' && Number(item.remaining_quantity1) > 0).length);
+        console.log('🔍 Sample inventory items:', inventoryData.slice(0, 3).map(item => ({ id: item.id, product_name: item.product_name, status: item.status })));
+        console.log('🔍 All inventory IDs:', inventoryData.map(item => item.id));
+        console.log('🔍 Current contractForm.productId:', contractForm.productId);
+        console.log('🔍 Will try to find product with ID:', contractForm.productId);
         setAllInventory(inventoryData);
       } catch (error) {
         console.error('Error loading inventory:', error);
@@ -496,6 +510,8 @@ const ContractEditForm = ({
         const response = await employeesService.getAll(selectedBranch);
         
         console.log('🔍 Employees response:', response);
+        console.log('🔍 Employees response status:', response.status);
+        console.log('🔍 Employees response data:', response.data);
         
         let employeesData = [];
         if (response.data?.success && Array.isArray(response.data.data)) {
@@ -529,6 +545,8 @@ const ContractEditForm = ({
         const response = await checkersService.getAll(selectedBranch);
         
         console.log('🔍 Checkers response:', response);
+        console.log('🔍 Checkers response status:', response.status);
+        console.log('🔍 Checkers response data:', response.data);
         
         let checkersData = [];
         if (response.data?.success && Array.isArray(response.data.data)) {
@@ -565,6 +583,8 @@ const ContractEditForm = ({
         const response = await employeesService.getAll(selectedBranch);
         
         console.log('🔍 Collectors response:', response);
+        console.log('🔍 Collectors response status:', response.status);
+        console.log('🔍 Collectors response data:', response.data);
         
         let employeesData = [];
         if (response.data?.success && Array.isArray(response.data.data)) {
@@ -579,6 +599,11 @@ const ContractEditForm = ({
         );
         
         console.log('🔍 Processed collectors data:', collectorsData);
+        console.log('🔍 Sample collectors:', collectorsData.slice(0, 3).map(emp => ({ id: emp.id, name: emp.name, position: emp.position, code: emp.code })));
+        console.log('🔍 All collector IDs:', collectorsData.map(emp => emp.id));
+        console.log('🔍 Current contractForm.line:', contractForm.line);
+        console.log('🔍 Current contractForm.collectorId:', contractForm.collectorId);
+        console.log('🔍 Will try to find collector with line:', contractForm.line);
         setAllCollectors(collectorsData);
       } catch (error) {
         console.error('Error loading collectors:', error);
@@ -603,6 +628,8 @@ const ContractEditForm = ({
         const response = await contractsService.getAll(selectedBranch);
         
         console.log('🔍 Contracts response:', response);
+        console.log('🔍 Contracts response status:', response.status);
+        console.log('🔍 Contracts response data:', response.data);
         
         let contractsData = [];
         if (response.data?.success && Array.isArray(response.data.data)) {
@@ -628,6 +655,10 @@ const ContractEditForm = ({
 
   // Map collectorId from line when collectors data is loaded
   useEffect(() => {
+    console.log('🔍 Collector mapping effect triggered - line:', contractForm.line, 'collectorId:', contractForm.collectorId, 'allCollectors length:', allCollectors.length);
+    console.log('🔍 contractForm.line type:', typeof contractForm.line);
+    console.log('🔍 contractForm.line value:', contractForm.line);
+    
     if (allCollectors.length > 0 && contractForm.line && !contractForm.collectorId) {
       // Try to find collector by line (code or name)
       const foundCollector = allCollectors.find(collector => 
@@ -636,13 +667,23 @@ const ContractEditForm = ({
         collector.full_name === contractForm.line
       );
       
+      console.log('🔍 Looking for collector with line:', contractForm.line);
+      console.log('🔍 Found collector:', foundCollector);
+      
       if (foundCollector) {
         console.log('🔍 Mapping collectorId from line:', contractForm.line, 'to collectorId:', foundCollector.id);
         setContractForm(prev => ({
           ...prev,
           collectorId: foundCollector.id
         }));
+      } else {
+        console.log('⚠️ No collector found for line:', contractForm.line);
+        console.log('🔍 Available collector codes:', allCollectors.map(c => c.code));
+        console.log('🔍 Available collector names:', allCollectors.map(c => c.name));
+        console.log('🔍 Available collector full_names:', allCollectors.map(c => c.full_name));
       }
+    } else {
+      console.log('⚠️ Cannot map collector: allCollectors length:', allCollectors.length, 'line:', contractForm.line, 'collectorId:', contractForm.collectorId);
     }
   }, [allCollectors, contractForm.line, contractForm.collectorId]);
 
@@ -856,6 +897,8 @@ const ContractEditForm = ({
         {/* Product Section */}
         <FormSection title="รายละเอียดสินค้าและแผนการผ่อน" icon={Package}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {console.log('🔍 Rendering product section - contractForm.productId:', contractForm.productId, 'allInventory length:', allInventory.length)}
+            {console.log('🔍 Available inventory items:', allInventory.filter(item => item.status === 'active' && Number(item.remaining_quantity1) > 0).map(item => ({ id: item.id, product_name: item.product_name })))}
             <SearchableSelectField 
               label="ชนิดสินค้า" 
               value={contractForm.productId} 
@@ -904,6 +947,8 @@ const ContractEditForm = ({
               placeholder={loadingCheckers ? "กำลังโหลดข้อมูล..." : "--เลือกผู้ตรวจสอบ--"} 
               required
             />
+            {console.log('🔍 Rendering collector section - contractForm.collectorId:', contractForm.collectorId, 'contractForm.line:', contractForm.line, 'allCollectors length:', allCollectors.length)}
+            {console.log('🔍 Available collectors:', allCollectors.map(emp => ({ id: emp.id, name: emp.name, position: emp.position, code: emp.code })))}
             <SearchableSelectField 
               label="สาย" 
               value={contractForm.collectorId} 
