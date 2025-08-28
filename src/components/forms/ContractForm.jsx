@@ -361,8 +361,12 @@ const ContractForm = ({
       try {
         setLoadingInventory(true);
         console.log('🔍 Loading inventory from API for branch:', selectedBranch);
+        console.log('🔍 API call params:', { branchId: selectedBranch, limit: 1000 });
         
-        const response = await inventoryService.getAll({ branchId: selectedBranch });
+        const response = await inventoryService.getAll({ 
+          branchId: selectedBranch,
+          limit: 1000 // ใช้ limit สูงแทน getAll=true เพื่อให้ได้ข้อมูลทั้งหมด
+        });
         console.log('🔍 Inventory API response:', response);
         console.log('🔍 Inventory API response.data:', response.data);
         console.log('🔍 Inventory API response.data.success:', response.data?.success);
@@ -386,9 +390,13 @@ const ContractForm = ({
         
         console.log('🔍 Processed inventory data:', inventoryData);
         console.log('🔍 Processed inventory data length:', inventoryData.length);
+        console.log('🔍 Pagination info:', response.data?.pagination);
         if (inventoryData.length > 0) {
           console.log('🔍 Sample inventory item:', inventoryData[0]);
         }
+        console.log('🔍 All inventory items count:', inventoryData.length);
+        console.log('🔍 Active inventory items:', inventoryData.filter(item => item.status === 'active').length);
+        console.log('🔍 Items with stock > 0:', inventoryData.filter(item => Number(item.remaining_quantity1) > 0).length);
         setAllInventory(inventoryData);
       } catch (error) {
         console.error('❌ Error loading inventory:', error);
@@ -1061,7 +1069,7 @@ const ContractForm = ({
                 value={contractForm.productId} 
                 onChange={(e) => handleSelectChange('productId', e.target.value)} 
                 options={allInventory
-                  // .filter(item => item.status === 'active' && Number(item.remaining_quantity1) > 0)
+                  .filter(item => item.status === 'active' && Number(item.remaining_quantity1) > 0)
                   .map(item => ({
                     ...item,
                     displayName: item.product_name || item.name || '',
