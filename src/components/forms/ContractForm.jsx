@@ -1071,6 +1071,17 @@ const ContractForm = ({
                 onChange={(e) => handleSelectChange('productId', e.target.value)} 
                 options={allInventory
                   .filter(item => item.status === 'active' && Number(item.remaining_quantity1) > 0)
+                  .sort((a, b) => {
+                    // เรียงลำดับตามวันที่รับ (เก่าไปใหม่)
+                    if (a.receive_date && b.receive_date) {
+                      return new Date(a.receive_date) - new Date(b.receive_date);
+                    }
+                    // ถ้าไม่มีวันที่รับ ให้เรียงตามชื่อสินค้า
+                    if (a.product_name && b.product_name) {
+                      return a.product_name.localeCompare(b.product_name, 'th');
+                    }
+                    return 0;
+                  })
                   .map(item => ({
                     ...item,
                     displayName: `${item.product_name || ''}${item.shop_name ? ` | ร้าน: ${item.shop_name}` : ''}${item.receive_date ? ` | รับ: ${new Date(item.receive_date).toLocaleDateString('th-TH')}` : ''}${item.remaining_quantity1 ? ` | คงเหลือ: ${item.remaining_quantity1} ชิ้น` : ''}`,

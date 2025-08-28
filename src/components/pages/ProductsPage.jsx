@@ -70,7 +70,20 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
             };
           });
           
-          setProducts(productsWithNames);
+          // เรียงลำดับตามวันที่รับ (เก่าไปใหม่) และชื่อสินค้า
+          const sortedProducts = productsWithNames.sort((a, b) => {
+            // เรียงลำดับตามวันที่รับ (เก่าไปใหม่)
+            if (a.receive_date && b.receive_date) {
+              return new Date(a.receive_date) - new Date(b.receive_date);
+            }
+            // ถ้าไม่มีวันที่รับ ให้เรียงตามชื่อสินค้า
+            if (a.display_name && b.display_name) {
+              return a.display_name.localeCompare(b.display_name, 'th');
+            }
+            return 0;
+          });
+          
+          setProducts(sortedProducts);
         } else {
           console.error('Error loading products:', response.data.message);
         }
@@ -229,8 +242,21 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
         const allProductsWithSold = [...allItems, ...soldItems];
         stats.totalItemsWithSold = allProductsWithSold.length;
         
+        // เรียงลำดับตามวันที่รับ (เก่าไปใหม่) และชื่อสินค้า
+        const sortedAllProducts = allProductsWithSold.sort((a, b) => {
+          // เรียงลำดับตามวันที่รับ (เก่าไปใหม่)
+          if (a.receive_date && b.receive_date) {
+            return new Date(a.receive_date) - new Date(b.receive_date);
+          }
+          // ถ้าไม่มีวันที่รับ ให้เรียงตามชื่อสินค้า
+          if (a.display_name && b.display_name) {
+            return a.display_name.localeCompare(b.display_name, 'th');
+          }
+          return 0;
+        });
+        
         // อัปเดต products state ให้รวมสินค้าที่ขายไปแล้ว
-        setProducts(allProductsWithSold);
+        setProducts(sortedAllProducts);
         
         setInventoryStats(stats);
       }
@@ -366,7 +392,20 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
             };
           });
           
-          setProducts(productsWithNames);
+          // เรียงลำดับตามวันที่รับ (เก่าไปใหม่) และชื่อสินค้า
+          const sortedProducts = productsWithNames.sort((a, b) => {
+            // เรียงลำดับตามวันที่รับ (เก่าไปใหม่)
+            if (a.receive_date && b.receive_date) {
+              return new Date(a.receive_date) - new Date(b.receive_date);
+            }
+            // ถ้าไม่มีวันที่รับ ให้เรียงตามชื่อสินค้า
+            if (a.display_name && b.display_name) {
+              return a.display_name.localeCompare(b.display_name, 'th');
+            }
+            return 0;
+          });
+          
+          setProducts(sortedProducts);
         }
         
         // Recalculate statistics after adding product
@@ -442,7 +481,20 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
               };
             });
             
-                      setProducts(productsWithNames);
+            // เรียงลำดับตามวันที่รับ (เก่าไปใหม่) และชื่อสินค้า
+            const sortedProducts = productsWithNames.sort((a, b) => {
+              // เรียงลำดับตามวันที่รับ (เก่าไปใหม่)
+              if (a.receive_date && b.receive_date) {
+                return new Date(a.receive_date) - new Date(b.receive_date);
+              }
+              // ถ้าไม่มีวันที่รับ ให้เรียงตามชื่อสินค้า
+              if (a.display_name && b.display_name) {
+                return a.display_name.localeCompare(b.display_name, 'th');
+              }
+              return 0;
+            });
+            
+            setProducts(sortedProducts);
         }
         
         // Recalculate statistics after deleting product
@@ -520,7 +572,20 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
             };
           });
           
-          setProducts(productsWithNames);
+          // เรียงลำดับตามวันที่รับ (เก่าไปใหม่) และชื่อสินค้า
+          const sortedProducts = productsWithNames.sort((a, b) => {
+            // เรียงลำดับตามวันที่รับ (เก่าไปใหม่)
+            if (a.receive_date && b.receive_date) {
+              return new Date(a.receive_date) - new Date(b.receive_date);
+            }
+            // ถ้าไม่มีวันที่รับ ให้เรียงตามชื่อสินค้า
+            if (a.display_name && b.display_name) {
+              return a.display_name.localeCompare(b.display_name, 'th');
+            }
+            return 0;
+          });
+          
+          setProducts(sortedProducts);
         }
         
         // Recalculate statistics after updating product
