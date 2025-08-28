@@ -1079,6 +1079,71 @@ const ContractForm = ({
                 placeholder={loadingInventory ? "กำลังโหลดข้อมูล..." : "--พิมพ์ค้นหาสินค้า--"} 
                 required
               />
+              
+              {/* แสดงข้อมูลสินค้าที่เลือก */}
+              {contractForm.productId && (() => {
+                const selectedProduct = allInventory.find(item => item.id == contractForm.productId);
+                if (selectedProduct) {
+                  return (
+                    <div className="col-span-full bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                      <h4 className="font-medium text-blue-900 flex items-center gap-2">
+                        <Package className="w-4 h-4" />
+                        ข้อมูลสินค้าที่เลือก
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="bg-white rounded-lg p-3 border border-blue-100">
+                          <div className="text-xs text-blue-600 font-medium mb-1">ร้านค้า</div>
+                          <div className="text-sm text-gray-900">
+                            {selectedProduct.shop_name || 'ไม่ระบุ'}
+                          </div>
+                        </div>
+                        <div className="bg-white rounded-lg p-3 border border-blue-100">
+                          <div className="text-xs text-blue-600 font-medium mb-1">วันที่รับ</div>
+                          <div className="text-sm text-gray-900">
+                            {selectedProduct.receive_date ? new Date(selectedProduct.receive_date).toLocaleDateString('th-TH') : 'ไม่ระบุ'}
+                          </div>
+                        </div>
+                        <div className="bg-white rounded-lg p-3 border border-blue-100">
+                          <div className="text-xs text-blue-600 font-medium mb-1">คงเหลือ</div>
+                          <div className="text-sm text-gray-900">
+                            {selectedProduct.remaining_quantity1 || 0} ชิ้น
+                          </div>
+                        </div>
+                        <div className="bg-white rounded-lg p-3 border border-blue-100">
+                          <div className="text-xs text-blue-600 font-medium mb-1">รหัสสินค้า</div>
+                          <div className="text-sm text-gray-900">
+                            {selectedProduct.product_code || 'ไม่ระบุ'}
+                          </div>
+                        </div>
+                      </div>
+                      {/* ข้อมูลเพิ่มเติม */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {selectedProduct.remarks && (
+                          <div className="bg-white rounded-lg p-3 border border-blue-100">
+                            <div className="text-xs text-blue-600 font-medium mb-1">หมายเหตุ</div>
+                            <div className="text-sm text-gray-900">
+                              {selectedProduct.remarks}
+                            </div>
+                          </div>
+                        )}
+                        <div className="bg-white rounded-lg p-3 border border-blue-100">
+                          <div className="text-xs text-blue-600 font-medium mb-1">สถานะ</div>
+                          <div className="text-sm text-gray-900">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              selectedProduct.status === 'active' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              {selectedProduct.status === 'active' ? 'พร้อมขาย' : 'ไม่พร้อมขาย'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
               <InputField 
                 label="ราคาขายจริง" 
                 value={(() => {
