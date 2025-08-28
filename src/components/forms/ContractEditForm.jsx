@@ -300,6 +300,7 @@ const ContractEditForm = ({
         console.log('🔍 Contract customerName:', contract?.customerName);
         console.log('🔍 Contract customerFullName:', contract?.customerFullName);
         console.log('🔍 Contract productName:', contract?.productName);
+        console.log('🔍 Contract inventoryProductName:', contract?.inventoryProductName);
         console.log('🔍 Contract productId:', contract?.productId);
         console.log('🔍 Contract product_id:', contract?.product_id);
         console.log('🔍 Contract line:', contract?.line);
@@ -366,7 +367,7 @@ const ContractEditForm = ({
             },
             productId: contract.productId || contract.product_id || '',
             productDetails: {
-              name: contract.productName || '',
+              name: contract.productName || contract.inventoryProductName || '',
               description: contract.productDetails?.description || contract.productDescription || '',
               price: contract.productPrice || contract.totalAmount || '',
               category: contract.productDetails?.category || contract.productCategory || '',
@@ -966,10 +967,88 @@ const ContractEditForm = ({
 
         {/* Product Section */}
         <FormSection title="รายละเอียดสินค้าและแผนการผ่อน" icon={Package}>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {console.log('🔍 Rendering product section - contractForm.productId:', contractForm.productId, 'allInventory length:', allInventory.length)}
+          {/* แถวแรก: สินค้าและค้นหา */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            {/* ช่องแสดงสินค้าที่เลือก */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">สินค้า *</label>
+              <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-700 min-h-[80px] flex items-start">
+                {(() => {
+                  // สินค้าที่บันทึกไว้ในสัญญา
+                  const selectedProduct = allInventory.find(item => 
+                    String(item.id) === String(contractForm.productId)
+                  );
+                  
+                  console.log('🔍 Product display debug:');
+                  console.log('  - contractForm.productId:', contractForm.productId);
+                  console.log('  - allInventory length:', allInventory.length);
+                  console.log('  - selectedProduct:', selectedProduct);
+                  console.log('  - contractForm.productDetails:', contractForm.productDetails);
+                  
+                  if (selectedProduct) {
+                    return (
+                      <div className="space-y-2">
+                        {/* ชื่อสินค้าและรหัส */}
+                        <div className="flex items-center gap-2">
+                          <Package className="w-4 h-4 text-purple-600" />
+                          <span className="font-medium">{selectedProduct.product_name || selectedProduct.name || 'ไม่ระบุชื่อสินค้า'}</span>
+                          {selectedProduct.product_code && (
+                            <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
+                              {selectedProduct.product_code}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* รายละเอียดเพิ่มเติม */}
+                        <div className="text-xs text-gray-600 space-y-1 ml-6">
+                          {selectedProduct.product_model && (
+                            <div>รุ่น: {selectedProduct.product_model}</div>
+                          )}
+                          {selectedProduct.product_serial_number && (
+                            <div>S/N: {selectedProduct.product_serial_number}</div>
+                          )}
+                          {selectedProduct.cost_price && (
+                            <div>ราคา: ฿{parseFloat(selectedProduct.cost_price).toLocaleString()}</div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  } else {
+                    // แสดงข้อมูลจาก contractForm.productDetails ถ้าไม่มีใน inventory
+                    if (contractForm.productDetails.name) {
+                      return (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Package className="w-4 h-4 text-purple-600" />
+                            <span className="font-medium">{contractForm.productDetails.name}</span>
+                          </div>
+                          <div className="text-xs text-gray-600 space-y-1 ml-6">
+                            {contractForm.productDetails.model && (
+                              <div>รุ่น: {contractForm.productDetails.model}</div>
+                            )}
+                            {contractForm.productDetails.serialNumber && (
+                              <div>S/N: {contractForm.productDetails.serialNumber}</div>
+                            )}
+                            {contractForm.productDetails.price && (
+                              <div>ราคา: ฿{parseFloat(contractForm.productDetails.price).toLocaleString()}</div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div className="flex items-center gap-2 text-gray-500">
+                          <Package className="w-4 h-4" />
+                          <span>ยังไม่ได้เลือกสินค้า</span>
+                        </div>
+                      );
+                    }
+                  }
+                })()}
+              </div>
+            </div>
             
-            {/* สร้าง product options ที่รวมสินค้าที่บันทึกไว้ด้วย */}
+            {/* ช่องค้นหาสินค้า */}
             {(() => {
               // สินค้าที่ active และมี stock
               const activeInventory = allInventory.filter(item => 
@@ -998,7 +1077,7 @@ const ContractEditForm = ({
               
               return (
                 <SearchableSelectField 
-                  label="ชนิดสินค้า" 
+                  label="ค้นหาสินค้า" 
                   value={contractForm.productId} 
                   onChange={(e) => handleSelectChange('productId', e.target.value)} 
                   options={productOptions.map(item => ({
@@ -1011,6 +1090,10 @@ const ContractEditForm = ({
                 />
               );
             })()}
+          </div>
+          
+          {/* แถวที่สอง: รายละเอียดสินค้าอื่นๆ */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <InputField label="ราคารวม" value={contractForm.productDetails.price} onChange={(e) => handleDetailChange('productDetails', 'price', e.target.value)} placeholder="ราคารวม" type="number" />
             <InputField label="รุ่น" value={contractForm.productDetails.model} onChange={(e) => handleDetailChange('productDetails', 'model', e.target.value)} placeholder="รุ่น"/>
             <InputField label="S/N" value={contractForm.productDetails.serialNumber} onChange={(e) => handleDetailChange('productDetails', 'serialNumber', e.target.value)} placeholder="Serial Number"/>
