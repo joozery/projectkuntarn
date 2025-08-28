@@ -71,15 +71,46 @@ const SearchableSelectField = ({ label, value, onChange, options, placeholder, r
   const [isOpen, setIsOpen] = useState(false);
   const [filteredOptions, setFilteredOptions] = useState(options);
 
-  console.log(`SearchableSelectField [${label}]:`, { 
+  console.log(`🔍 SearchableSelectField [${label}]:`, { 
     optionsCount: options?.length || 0, 
     options: options,
     value,
     isOpen,
-    searchTerm 
+    searchTerm,
+    optionsType: typeof options,
+    isArray: Array.isArray(options),
+    // เพิ่ม debug สำหรับ options
+    optionsSample: options?.slice(0, 3),
+    optionsKeys: options?.[0] ? Object.keys(options[0]) : [],
+    optionsStatuses: options?.map(item => ({ id: item.id, status: item.status, qty: item.remaining_quantity1, name: item.product_name || item.name })),
+    // เพิ่ม debug สำหรับ options ที่มีข้อมูล
+    optionsWithData: options?.filter(item => item.product_name || item.name),
+    // เพิ่ม debug สำหรับ options ที่ไม่มีข้อมูล
+    optionsWithoutData: options?.filter(item => !item.product_name && !item.name),
+    // เพิ่ม debug สำหรับ options ที่มีข้อมูลและ status = 'active'
+    optionsWithDataAndActive: options?.filter(item => item.status === 'active' && (item.product_name || item.name)),
+    // เพิ่ม debug สำหรับ options ที่มีข้อมูลและ qty > 0
+    optionsWithDataAndQty: options?.filter(item => Number(item.remaining_quantity1) > 0 && (item.product_name || item.name))
   });
 
   useEffect(() => {
+    console.log(`🔍 SearchableSelectField [${label}] useEffect:`, {
+      options,
+      searchTerm,
+      optionsLength: options?.length || 0,
+      // เพิ่ม debug สำหรับ options
+      optionsSample: options?.slice(0, 3),
+      optionsKeys: options?.[0] ? Object.keys(options[0]) : [],
+      // เพิ่ม debug สำหรับ options ที่มีข้อมูล
+      optionsWithData: options?.filter(item => item.product_name || item.name),
+      // เพิ่ม debug สำหรับ options ที่ไม่มีข้อมูล
+      optionsWithoutData: options?.filter(item => !item.product_name && !item.name),
+      // เพิ่ม debug สำหรับ options ที่มีข้อมูลและ status = 'active'
+      optionsWithDataAndActive: options?.filter(item => item.status === 'active' && (item.product_name || item.name)),
+      // เพิ่ม debug สำหรับ options ที่มีข้อมูลและ qty > 0
+      optionsWithDataAndQty: options?.filter(item => Number(item.remaining_quantity1) > 0 && (item.product_name || item.name))
+    });
+    
     const filtered = options.filter(option => 
       option.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       option.product_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -90,6 +121,23 @@ const SearchableSelectField = ({ label, value, onChange, options, placeholder, r
       option.product_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       option.surname?.toLowerCase().includes(searchTerm.toLowerCase())
     );
+    
+    console.log(`🔍 SearchableSelectField [${label}] filtered:`, {
+      filteredCount: filtered.length,
+      filtered: filtered,
+      // เพิ่ม debug สำหรับ filtered
+      filteredSample: filtered.slice(0, 3),
+      searchTerm: searchTerm,
+      // เพิ่ม debug สำหรับ filtered ที่มีข้อมูล
+      filteredWithData: filtered.filter(item => item.product_name || item.name),
+      // เพิ่ม debug สำหรับ filtered ที่ไม่มีข้อมูล
+      filteredWithoutData: filtered.filter(item => !item.product_name && !item.name),
+      // เพิ่ม debug สำหรับ filtered ที่มีข้อมูลและ status = 'active'
+      filteredWithDataAndActive: filtered.filter(item => item.status === 'active' && (item.product_name || item.name)),
+      // เพิ่ม debug สำหรับ filtered ที่มีข้อมูลและ qty > 0
+      filteredWithDataAndQty: filtered.filter(item => Number(item.remaining_quantity1) > 0 && (item.product_name || item.name))
+    });
+    
     setFilteredOptions(filtered);
   }, [searchTerm, options]);
 
@@ -126,6 +174,30 @@ const SearchableSelectField = ({ label, value, onChange, options, placeholder, r
         
         {isOpen && (
           <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+            {console.log(`🔍 SearchableSelectField [${label}] rendering dropdown with:`, {
+              filteredOptionsCount: filteredOptions?.length || 0,
+              filteredOptions: filteredOptions,
+              // เพิ่ม debug สำหรับ filteredOptions
+              filteredOptionsSample: filteredOptions?.slice(0, 3),
+              filteredOptionsKeys: filteredOptions?.[0] ? Object.keys(filteredOptions[0]) : [],
+              searchTerm: searchTerm,
+              isOpen: isOpen,
+              // เพิ่ม debug สำหรับ filteredOptions ที่มีข้อมูล
+              filteredOptionsWithData: filteredOptions?.filter(item => item.product_name || item.name),
+              // เพิ่ม debug สำหรับ filteredOptions ที่ไม่มีข้อมูล
+              filteredOptionsWithoutData: filteredOptions?.filter(item => !item.product_name && !item.name),
+              // เพิ่ม debug สำหรับ options ที่ส่งมา
+              originalOptions: options,
+              originalOptionsCount: options?.length || 0,
+              // เพิ่ม debug สำหรับ options ที่มีข้อมูล
+              originalOptionsWithData: options?.filter(item => item.product_name || item.name),
+              // เพิ่ม debug สำหรับ options ที่ไม่มีข้อมูล
+              originalOptionsWithoutData: options?.filter(item => !item.product_name && !item.name),
+              // เพิ่ม debug สำหรับ options ที่มีข้อมูลและ status = 'active'
+              originalOptionsWithDataAndActive: options?.filter(item => item.status === 'active' && (item.product_name || item.name)),
+              // เพิ่ม debug สำหรับ options ที่มีข้อมูลและ qty > 0
+              originalOptionsWithDataAndQty: options?.filter(item => Number(item.remaining_quantity1) > 0 && (item.product_name || item.name))
+            })}
             {filteredOptions.length > 0 ? (
               filteredOptions.map(option => (
                 <div
@@ -209,7 +281,7 @@ const ContractForm = ({
     type: typeof selectedBranch
   });
 
-  console.log('ContractForm state:', {
+  console.log('🔍 ContractForm state:', {
     allCustomersCount: allCustomers?.length || 0,
     allInventoryCount: allInventory?.length || 0,
     allEmployeesCount: allEmployees?.length || 0,
@@ -219,7 +291,24 @@ const ContractForm = ({
     loadingInventory,
     loadingEmployees,
     loadingCheckers,
-    loadingCollectors
+    loadingCollectors,
+    // เพิ่ม debug สำหรับ inventory
+    allInventorySample: allInventory?.slice(0, 3),
+    allInventoryStatuses: allInventory?.map(item => ({ id: item.id, status: item.status, qty: item.remaining_quantity1 })),
+    // เพิ่ม debug สำหรับ inventory ที่จะใช้ใน SearchableSelectField
+    inventoryForProductSelect: allInventory?.map(item => ({
+      ...item,
+      displayName: item.product_name || item.name || '',
+      searchText: `${item.product_name || ''} ${item.product_code || ''}`.trim()
+    })),
+    // เพิ่ม debug สำหรับ inventory ที่มีข้อมูล
+    inventoryWithData: allInventory?.filter(item => item.product_name || item.name),
+    // เพิ่ม debug สำหรับ inventory ที่ไม่มีข้อมูล
+    inventoryWithoutData: allInventory?.filter(item => !item.product_name && !item.name),
+    // เพิ่ม debug สำหรับ inventory ที่มี status = 'active'
+    activeInventory: allInventory?.filter(item => item.status === 'active'),
+    // เพิ่ม debug สำหรับ inventory ที่มี qty > 0
+    inventoryWithQty: allInventory?.filter(item => Number(item.remaining_quantity1) > 0)
   });
 
   console.log('ContractForm allCheckers data:', allCheckers);
@@ -271,25 +360,38 @@ const ContractForm = ({
       
       try {
         setLoadingInventory(true);
-        console.log('Loading inventory from API for branch:', selectedBranch);
+        console.log('🔍 Loading inventory from API for branch:', selectedBranch);
         
         const response = await inventoryService.getAll({ branchId: selectedBranch });
-        console.log('Inventory API response:', response);
+        console.log('🔍 Inventory API response:', response);
+        console.log('🔍 Inventory API response.data:', response.data);
+        console.log('🔍 Inventory API response.data.success:', response.data?.success);
+        console.log('🔍 Inventory API response.data.data:', response.data?.data);
+        console.log('🔍 Inventory API response.data.data length:', response.data?.data?.length);
         
         // Handle different response formats
         let inventoryData = [];
         if (response.data?.success && Array.isArray(response.data.data)) {
           inventoryData = response.data.data;
+          console.log('🔍 Using response.data.data format');
         } else if (Array.isArray(response.data)) {
           inventoryData = response.data;
+          console.log('🔍 Using response.data array format');
         } else if (response.data && Array.isArray(response.data)) {
           inventoryData = response.data;
+          console.log('🔍 Using response.data array format (fallback)');
+        } else {
+          console.log('⚠️ Unknown response format:', response);
         }
         
-        console.log('Processed inventory data:', inventoryData);
+        console.log('🔍 Processed inventory data:', inventoryData);
+        console.log('🔍 Processed inventory data length:', inventoryData.length);
+        if (inventoryData.length > 0) {
+          console.log('🔍 Sample inventory item:', inventoryData[0]);
+        }
         setAllInventory(inventoryData);
       } catch (error) {
-        console.error('Error loading inventory:', error);
+        console.error('❌ Error loading inventory:', error);
         toast({
           title: "เกิดข้อผิดพลาด",
           description: "ไม่สามารถโหลดข้อมูลสินค้าได้",
@@ -923,12 +1025,43 @@ const ContractForm = ({
         {/* Product Section */}
         <FormSection title="รายละเอียดสินค้าและแผนการผ่อน" icon={Package}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {console.log('🔍 ContractForm: Rendering product SearchableSelectField with:', {
+                allInventoryCount: allInventory?.length || 0,
+                allInventory: allInventory,
+                filteredInventory: allInventory.filter(item => item.status === 'active' && Number(item.remaining_quantity1) > 0),
+                activeWithQtyCount: allInventory.filter(item => item.status === 'active' && Number(item.remaining_quantity1) > 0).length,
+                // เพิ่ม debug สำหรับ options ที่จะส่งไป SearchableSelectField
+                optionsToSend: allInventory.map(item => ({
+                  ...item,
+                  displayName: item.product_name || item.name || '',
+                  searchText: `${item.product_name || ''} ${item.product_code || ''}`.trim()
+                })),
+                // เพิ่ม debug สำหรับ inventory statuses
+                inventoryStatuses: allInventory?.map(item => ({ 
+                  id: item.id, 
+                  status: item.status, 
+                  qty: item.remaining_quantity1,
+                  name: item.product_name || item.name 
+                })),
+                // เพิ่ม debug สำหรับ inventory ที่มี status = 'active'
+                activeInventory: allInventory?.filter(item => item.status === 'active'),
+                // เพิ่ม debug สำหรับ inventory ที่มี qty > 0
+                inventoryWithQty: allInventory?.filter(item => Number(item.remaining_quantity1) > 0),
+                // เพิ่ม debug สำหรับ inventory ที่มีข้อมูล
+                inventoryWithData: allInventory?.filter(item => item.product_name || item.name),
+                // เพิ่ม debug สำหรับ inventory ที่ไม่มีข้อมูล
+                inventoryWithoutData: allInventory?.filter(item => !item.product_name && !item.name),
+                // เพิ่ม debug สำหรับ inventory ที่มีข้อมูลและ status = 'active'
+                activeInventoryWithData: allInventory?.filter(item => item.status === 'active' && (item.product_name || item.name)),
+                // เพิ่ม debug สำหรับ inventory ที่มีข้อมูลและ qty > 0
+                inventoryWithDataAndQty: allInventory?.filter(item => Number(item.remaining_quantity1) > 0 && (item.product_name || item.name))
+              })}
               <SearchableSelectField 
                 label="ชนิดสินค้า" 
                 value={contractForm.productId} 
                 onChange={(e) => handleSelectChange('productId', e.target.value)} 
                 options={allInventory
-                  .filter(item => item.status === 'active' && Number(item.remaining_quantity1) > 0)
+                  // .filter(item => item.status === 'active' && Number(item.remaining_quantity1) > 0)
                   .map(item => ({
                     ...item,
                     displayName: item.product_name || item.name || '',

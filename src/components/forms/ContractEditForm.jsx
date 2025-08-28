@@ -90,7 +90,7 @@ const SearchableSelectField = ({ label, value, onChange, options, placeholder, r
       <div className="relative">
         <input
           type="text"
-          value={isOpen ? searchTerm : (selectedOption?.displayName || selectedOption?.name || selectedOption?.full_name || selectedOption?.fullName || selectedOption?.nickname || selectedOption?.product_name || '')}
+          value={isOpen ? searchTerm : (selectedOption?.displayName || selectedOption?.name || selectedOption?.full_name || selectedOption?.fullName || selectedOption?.nickname || selectedOption?.product_name || selectedOption?.code || '')}
           onChange={(e) => {
             if (isOpen) {
               setSearchTerm(e.target.value);
@@ -115,7 +115,7 @@ const SearchableSelectField = ({ label, value, onChange, options, placeholder, r
                 setSearchTerm('');
               }}
             >
-              {option.displayName || option.name || option.full_name || option.fullName || option.nickname || option.product_name}
+              {option.displayName || option.name || option.full_name || option.fullName || option.nickname || option.product_name || option.code}
               {option.phone && <span className="text-gray-500 ml-2">({option.phone})</span>}
             </div>
           ))}
@@ -312,6 +312,14 @@ const ContractEditForm = ({
         console.log('🔍 Contract guarantorNickname:', contract?.guarantorNickname);
         console.log('🔍 Contract productDetails:', contract?.productDetails);
         console.log('🔍 Contract plan:', contract?.plan);
+        // เพิ่ม debug สำหรับ collector และ line
+        console.log('🔍 Contract collectorId (raw):', contract?.collectorId);
+        console.log('🔍 Contract line (raw):', contract?.line);
+        console.log('🔍 Contract collector_id (alternative):', contract?.collector_id);
+        console.log('🔍 Contract collectorId type:', typeof contract?.collectorId);
+        console.log('🔍 Contract line type:', typeof contract?.line);
+        console.log('🔍 Contract collectorId truthy:', !!contract?.collectorId);
+        console.log('🔍 Contract line truthy:', !!contract?.line);
         
         if (contract) {
           // Map contract data to form based on backend API structure
@@ -381,6 +389,14 @@ const ContractEditForm = ({
             endDate: contract.endDate || ''
           };
           
+          // เพิ่ม debug สำหรับ collector และ line mapping
+          console.log('🔍 Collector and line mapping debug:');
+          console.log('  - Original contract.collectorId:', contract.collectorId);
+          console.log('  - Original contract.line:', contract.line);
+          console.log('  - Original contract.collector_id:', contract.collector_id);
+          console.log('  - Mapped formData.collectorId:', formData.collectorId);
+          console.log('  - Mapped formData.line:', formData.line);
+          console.log('  - Will try to map collectorId from line if needed');
           console.log('🔍 Mapped form data:', formData);
           console.log('🔍 Mapped customerDetails:', formData.customerDetails);
           console.log('🔍 Mapped productDetails:', formData.productDetails);
@@ -585,12 +601,29 @@ const ContractEditForm = ({
         console.log('🔍 Collectors response:', response);
         console.log('🔍 Collectors response status:', response.status);
         console.log('🔍 Collectors response data:', response.data);
+        // เพิ่ม debug logging ในส่วนที่โหลด employees
+        console.log('🔍 Employees response.data.success:', response.data?.success);
+        console.log('🔍 Employees response.data.data:', response.data?.data);
+        console.log('🔍 Employees response.data.data length:', response.data?.data?.length);
+        console.log('🔍 Employees response.data.data type:', typeof response.data?.data);
+        console.log('🔍 Employees response.data.data isArray:', Array.isArray(response.data?.data));
         
         let employeesData = [];
         if (response.data?.success && Array.isArray(response.data.data)) {
           employeesData = response.data.data;
+          console.log('🔍 Using response.data.data format');
         } else if (Array.isArray(response.data)) {
           employeesData = response.data;
+          console.log('🔍 Using response.data array format');
+        } else {
+          console.log('⚠️ Unknown response format:', response);
+        }
+        
+        console.log('🔍 Processed employees data:', employeesData);
+        console.log('🔍 Processed employees data length:', employeesData.length);
+        if (employeesData.length > 0) {
+          console.log('🔍 Sample employee:', employeesData[0]);
+          console.log('🔍 Sample employee keys:', Object.keys(employeesData[0]));
         }
         
         // Filter for collectors
@@ -604,6 +637,10 @@ const ContractEditForm = ({
         console.log('🔍 Current contractForm.line:', contractForm.line);
         console.log('🔍 Current contractForm.collectorId:', contractForm.collectorId);
         console.log('🔍 Will try to find collector with line:', contractForm.line);
+        // เพิ่ม debug สำหรับ collectors data
+        console.log('🔍 Collectors data structure sample:', collectorsData[0] ? Object.keys(collectorsData[0]) : 'No collectors');
+        console.log('🔍 Collectors with code field:', collectorsData.filter(emp => emp.code).map(emp => ({ id: emp.id, name: emp.name, code: emp.code })));
+        console.log('🔍 Collectors without code field:', collectorsData.filter(emp => !emp.code).map(emp => ({ id: emp.id, name: emp.name, code: emp.code })));
         setAllCollectors(collectorsData);
       } catch (error) {
         console.error('Error loading collectors:', error);
@@ -658,6 +695,9 @@ const ContractEditForm = ({
     console.log('🔍 Collector mapping effect triggered - line:', contractForm.line, 'collectorId:', contractForm.collectorId, 'allCollectors length:', allCollectors.length);
     console.log('🔍 contractForm.line type:', typeof contractForm.line);
     console.log('🔍 contractForm.line value:', contractForm.line);
+    console.log('🔍 contractForm.collectorId type:', typeof contractForm.collectorId);
+    console.log('🔍 contractForm.collectorId value:', contractForm.collectorId);
+    console.log('🔍 allCollectors sample:', allCollectors.slice(0, 3).map(c => ({ id: c.id, name: c.name, code: c.code, full_name: c.full_name })));
     
     if (allCollectors.length > 0 && contractForm.line && !contractForm.collectorId) {
       // Try to find collector by line (code or name)
@@ -684,6 +724,15 @@ const ContractEditForm = ({
       }
     } else {
       console.log('⚠️ Cannot map collector: allCollectors length:', allCollectors.length, 'line:', contractForm.line, 'collectorId:', contractForm.collectorId);
+      if (contractForm.collectorId) {
+        console.log('🔍 collectorId already exists, no need to map from line');
+      }
+      if (!contractForm.line) {
+        console.log('🔍 No line value to map from');
+      }
+      if (allCollectors.length === 0) {
+        console.log('🔍 No collectors data available');
+      }
     }
   }, [allCollectors, contractForm.line, contractForm.collectorId]);
 
@@ -780,6 +829,27 @@ const ContractEditForm = ({
       </div>
     );
   }
+
+  console.log('🔍 ContractEditForm state:', {
+    allCustomersCount: allCustomers?.length || 0,
+    allInventoryCount: allInventory?.length || 0,
+    allEmployeesCount: allEmployees?.length || 0,
+    allCheckersCount: allCheckers?.length || 0,
+    allCollectorsCount: allCollectors?.length || 0,
+    loadingCustomers,
+    loadingInventory,
+    loadingEmployees,
+    loadingCheckers,
+    loadingCollectors,
+    // เพิ่ม debug สำหรับ collector
+    allCollectorsSample: allCollectors?.slice(0, 3),
+    allCollectorsStatuses: allCollectors?.map(item => ({ id: item.id, name: item.name, position: item.position, code: item.code })),
+    // เพิ่ม debug สำหรับ contractForm
+    contractFormCollectorId: contractForm?.collectorId,
+    contractFormLine: contractForm?.line,
+    contractFormSalespersonId: contractForm?.salespersonId,
+    contractFormInspectorId: contractForm?.inspectorId
+  });
 
   return (
     <motion.div
@@ -947,7 +1017,13 @@ const ContractEditForm = ({
             <InputField label="ดาวน์" value={contractForm.plan.downPayment} onChange={(e) => handleDetailChange('plan', 'downPayment', e.target.value)} placeholder="เงินดาวน์" type="number"/>
             <InputField label="ผ่อน/เดือน" value={contractForm.plan.monthlyPayment} onChange={(e) => handleDetailChange('plan', 'monthlyPayment', e.target.value)} placeholder="ผ่อนต่อเดือน" type="number" required/>
             <InputField label="จำนวนงวด" value={contractForm.plan.months} onChange={(e) => handleDetailChange('plan', 'months', e.target.value)} placeholder="จำนวนเดือน" type="number" required/>
-            <InputField label="เก็บทุกวันที่" value={contractForm.plan.collectionDate} onChange={(e) => handleDetailChange('plan', 'collectionDate', e.target.value)} placeholder="ว-ด-ป เช่น 31-12-2564"/>
+            <InputField 
+              label="เก็บทุกวันที่" 
+              type="date"
+              value={contractForm.plan.collectionDate ? contractForm.plan.collectionDate.split('T')[0] : ''} 
+              onChange={(e) => handleDetailChange('plan', 'collectionDate', e.target.value)} 
+              placeholder="ว-ด-ป เช่น 31-12-2564"
+            />
           </div>
         </FormSection>
         
@@ -980,26 +1056,59 @@ const ContractEditForm = ({
                 emp.full_name === contractForm.line
               );
               
+              // สร้าง collector จำลองสำหรับสายที่บันทึกไว้แต่ไม่อยู่ในรายการปัจจุบัน
+              let virtualCollector = null;
+              if (contractForm.line && !selectedCollector) {
+                virtualCollector = {
+                  id: `line_${contractForm.line}`,
+                  name: contractForm.line,
+                  full_name: contractForm.line,
+                  code: contractForm.line,
+                  position: 'collector',
+                  isVirtual: true
+                };
+              }
+              
               console.log('🔍 Collector selection debug:');
               console.log('  - contractForm.collectorId:', contractForm.collectorId);
               console.log('  - contractForm.line:', contractForm.line);
               console.log('  - selectedCollector:', selectedCollector);
+              console.log('  - virtualCollector:', virtualCollector);
               console.log('  - allCollectors count:', allCollectors.length);
+              console.log('  - allCollectors sample:', allCollectors.slice(0, 3).map(emp => ({ id: emp.id, name: emp.name, position: emp.position, code: emp.code })));
               
               // รวม options โดยให้สายที่บันทึกไว้อยู่ข้างหน้า
-              const collectorOptions = selectedCollector && !allCollectors.some(emp => 
-                String(emp.id) === String(selectedCollector.id)
-              )
-                ? [selectedCollector, ...allCollectors]
-                : allCollectors;
+              let collectorOptions = allCollectors;
+              if (selectedCollector && !allCollectors.some(emp => String(emp.id) === String(selectedCollector.id))) {
+                collectorOptions = [selectedCollector, ...allCollectors];
+              } else if (virtualCollector) {
+                collectorOptions = [virtualCollector, ...allCollectors];
+              }
               
-              console.log('🔍 Collector options:', collectorOptions.map(emp => ({ id: emp.id, name: emp.name, position: emp.position, code: emp.code })));
+              console.log('🔍 Collector options:', collectorOptions.map(emp => ({ id: emp.id, name: emp.name, position: emp.position, code: emp.code, isVirtual: emp.isVirtual })));
+              console.log('🔍 Final collectorOptions count:', collectorOptions.length);
+              console.log('🔍 Final collectorOptions with selectedCollector:', selectedCollector ? 'YES' : 'NO');
+              console.log('🔍 Final collectorOptions with virtualCollector:', virtualCollector ? 'YES' : 'NO');
               
               return (
                 <SearchableSelectField 
                   label="สาย" 
-                  value={contractForm.collectorId} 
-                  onChange={(e) => handleSelectChange('collectorId', e.target.value)} 
+                  value={contractForm.collectorId || (virtualCollector ? virtualCollector.id : '')} 
+                  onChange={(e) => {
+                    const selectedId = e.target.value;
+                    if (selectedId.startsWith('line_')) {
+                      // ถ้าเลือกสายจำลอง ให้ใช้ line แทน collectorId
+                      handleSelectChange('line', selectedId.replace('line_', ''));
+                      handleSelectChange('collectorId', '');
+                    } else {
+                      // ถ้าเลือกพนักงานจริง
+                      const selectedEmp = allCollectors.find(emp => String(emp.id) === String(selectedId));
+                      if (selectedEmp) {
+                        handleSelectChange('collectorId', selectedEmp.id);
+                        handleSelectChange('line', selectedEmp.code || selectedEmp.name || '');
+                      }
+                    }
+                  }} 
                   options={collectorOptions} 
                   placeholder={loadingCollectors ? "กำลังโหลดข้อมูล..." : "--เลือกสาย--"} 
                   required

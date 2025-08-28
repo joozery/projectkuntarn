@@ -613,7 +613,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="text-sm text-gray-700">
+            <div className="text-sm text-gray-700">
                 แสดง {indexOfFirstItem + 1} ถึง {Math.min(indexOfLastItem, effectiveTotal)} จาก {effectiveTotal} รายการ
               </div>
               <div className="flex items-center gap-2 text-sm">
@@ -637,7 +637,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
               <Button variant="outline" size="sm" onClick={handlePrev} disabled={currentPage === 1} className="flex items-center gap-1">
                 <ChevronLeft className="w-4 h-4" /> Back
               </Button>
-
+              
               {/* Page list with ellipsis */}
               <div className="flex items-center gap-1">
                 {(() => {
@@ -662,7 +662,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                   return pages;
                 })()}
               </div>
-
+              
               {/* Next/Last */}
               <Button variant="outline" size="sm" onClick={handleNext} disabled={currentPage === totalPages} className="flex items-center gap-1">
                 Next <ChevronRight className="w-4 h-4" />
