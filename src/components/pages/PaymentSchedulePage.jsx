@@ -315,13 +315,26 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
     };
   };
 
-  // ฟังก์ชันสำหรับเงินดาวน์ (ไม่มี notes)
+  // ฟังก์ชันสำหรับเงินดาวน์: ดึงเลขที่ใบเสร็จจากแถว payments ที่เป็นเงินดาวน์/งวดแรก
   const getDownPaymentInfo = () => {
-    return {
-      receiptNumber: '-',
-      status: 'ปกติ',
-      discount: 'ไม่มี'
-    };
+    try {
+      const downPaymentRow = (installments || []).find(p =>
+        (p.notes || '').includes('เงินดาวน์') || (p.notes || '').includes('งวดแรก')
+      );
+      if (downPaymentRow) {
+        const fromNotes = (downPaymentRow.notes || '').includes('ใบเสร็จ:')
+          ? downPaymentRow.notes.split('ใบเสร็จ:')[1]?.split(',')[0]?.trim()
+          : '';
+        return {
+          receiptNumber: downPaymentRow.receiptNumber || fromNotes || '-',
+          status: 'ปกติ',
+          discount: 'ไม่มี'
+        };
+      }
+    } catch (e) {
+      console.warn('Down payment info parse error:', e);
+    }
+    return { receiptNumber: '-', status: 'ปกติ', discount: 'ไม่มี' };
   };
 
   // ฟังก์ชันแปลงวันที่ให้ถูกต้อง
@@ -348,11 +361,12 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
   };
 
   // สร้างรายการงวดที่ชำระแล้ว
+  const downInfo = getDownPaymentInfo();
   const paidInstallments = [
-    // เงินดาวน์/งวดแรก (แสดงเสมอ) - ใช้ข้อมูลจาก API
+    // เงินดาวน์/งวดแรก (แสดงเสมอ) - แนบเลขที่ใบเสร็จถ้ามี
     ...(parseFloat(mappedCustomerInfo.downPayment || 0) > 0 ? [{
       id: 'down-payment',
-      notes: 'เงินดาวน์/งวดแรก',
+      notes: `ใบเสร็จ: ${downInfo.receiptNumber || '-'}, สถานะ: ปกติ, ส่วนลด: ไม่มี`,
       paymentDate: customerInstallment?.contract_date || customerInstallment?.createdAt || mappedCustomerInfo.collectionDate,
       dueDate: customerInstallment?.contract_date || customerInstallment?.createdAt || mappedCustomerInfo.collectionDate,
       amount: parseFloat(mappedCustomerInfo.downPayment || 0),
