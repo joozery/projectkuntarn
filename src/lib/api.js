@@ -1,27 +1,20 @@
-import axios from 'axios';
+import axios from "axios";
 
 // API Configuration
-const API_BASE_URL = 'https://kuntran-backend-api-86c9bb65f6fb.herokuapp.com/api';
+const API_BASE_URL = "https://72-60-43-104.sslip.io/kuntarn/api";
 
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
   headers: {
-    'Content-Type': 'application/json',
-    'Cache-Control': 'no-cache',
-    'Pragma': 'no-cache',
+    "Content-Type": "application/json",
   },
 });
 
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
-    // Add any auth tokens here if needed
-    // const token = localStorage.getItem('token');
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`;
-    // }
     return config;
   },
   (error) => {
@@ -35,42 +28,31 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Handle common errors
     if (error.response) {
-      // Server responded with error status
-      console.error('API Error:', error.response.data);
-      
-      // Handle specific error cases
+      console.error("API Error:", error.response.data);
       switch (error.response.status) {
         case 401:
-          // Unauthorized - redirect to login
-          console.error('Unauthorized access');
+          console.error("Unauthorized access");
           break;
         case 403:
-          // Forbidden
-          console.error('Access forbidden');
+          console.error("Access forbidden");
           break;
         case 404:
-          // Not found
-          console.error('Resource not found');
+          console.error("Resource not found");
           break;
         case 500:
-          // Server error
-          console.error('Server error');
+          console.error("Server error");
           break;
         default:
-          console.error('API request failed');
+          console.error("API request failed");
       }
     } else if (error.request) {
-      // Network error
-      console.error('Network error:', error.request);
+      console.error("Network error:", error.request);
     } else {
-      // Other error
-      console.error('Error:', error.message);
+      console.error("Error:", error.message);
     }
-    
     return Promise.reject(error);
   }
 );
 
-export default api; 
+export default api;

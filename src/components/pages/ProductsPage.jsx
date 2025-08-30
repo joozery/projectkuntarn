@@ -84,7 +84,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
           });
           
           setProducts(sortedProducts);
-        } else {
+    } else {
           console.error('Error loading products:', response.data.message);
         }
         
@@ -646,9 +646,9 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
             <p className="text-gray-600">กำลังโหลดข้อมูล...</p>
           </div>
         </div>
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-          <span className="ml-2 text-gray-500">กำลังโหลดข้อมูลสินค้า...</span>
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+                <span className="ml-2 text-gray-500">กำลังโหลดข้อมูลสินค้า...</span>
         </div>
       </div>
     );
@@ -820,13 +820,13 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
       </div>
 
       {/* Add/Edit Product Form Section */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="mb-4 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
-          <div className="flex items-center gap-2 text-sm text-emerald-700">
-            <Building2 className="w-4 h-4" />
-            <span>สินค้าจะถูกเพิ่มในสาขา: <strong>{currentBranch?.name}</strong></span>
-          </div>
-        </div>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="mb-4 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+              <div className="flex items-center gap-2 text-sm text-emerald-700">
+                <Building2 className="w-4 h-4" />
+                <span>สินค้าจะถูกเพิ่มในสาขา: <strong>{currentBranch?.name}</strong></span>
+              </div>
+            </div>
         <h2 className="text-lg font-semibold text-gray-900 mb-4">
           {editingProduct ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่'}
         </h2>
@@ -859,8 +859,8 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
         ) : (
           <ProductForm onAddProduct={addProduct} submitting={submitting} contracts={contracts} />
         )}
-      </div>
-
+        </div>
+        
       {/* Search and Filter Bar */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
         <div className="flex items-center gap-4">
@@ -873,12 +873,12 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-          </div>
+            </div>
           <Button variant="outline" className="flex items-center gap-2">
             <Filter className="w-4 h-4" />
             กรอง
-          </Button>
-        </div>
+                  </Button>
+                </div>
       </div>
 
       {/* Products Table */}
@@ -907,7 +907,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
             <tbody className="bg-white divide-y divide-gray-200">
               {currentProducts.map((product) => (
                 <motion.tr
-                  key={product.id}
+                      key={product.id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className={`transition-colors ${
@@ -927,7 +927,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                     {product.isSoldItem ? (
                       <span className="text-red-600 font-medium">
                         {product.receive_date ? new Date(product.receive_date).toLocaleDateString('th-TH') : '-'}
-                      </span>
+                            </span>
                     ) : (
                       product.receive_date ? new Date(product.receive_date).toLocaleDateString('th-TH') : '-'
                     )}
@@ -1076,7 +1076,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                         <span className="text-xs text-red-600 font-medium bg-red-50 px-2 py-1 rounded">
                           ขายแล้ว
                         </span>
-                      </div>
+                        </div>
                     ) : (
                       <div className="flex items-center gap-2">
                         <Button
@@ -1186,7 +1186,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                   className="w-16 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
                 <Button variant="outline" size="sm" onClick={() => handlePageChange(parseInt(pageInput || '1'))}>Go</Button>
-              </div>
+                </div>
             </div>
           </div>
         </div>
