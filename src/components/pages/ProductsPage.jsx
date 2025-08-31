@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
-import { Package, Plus, DollarSign, Trash2, Building2, Loader2, Search, Filter, ChevronLeft, ChevronRight, Edit } from 'lucide-react';
+import { Package, Plus, DollarSign, Trash2, Building2, Loader2, Search, Filter, ChevronLeft, ChevronRight, Edit, CheckCircle } from 'lucide-react';
 import ProductForm from '@/components/ProductForm';
 import { inventoryService } from '@/services/inventoryService';
 import { contractsService } from '@/services/contractsService';
@@ -39,6 +39,9 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
       try {
         // Load contracts first
         const contractsData = await loadContracts();
+        
+        // Load contract details first (for mapping)
+        await loadContractDetails();
         
         // Then load products with contract data
         const response = await inventoryService.getAll({
@@ -83,16 +86,15 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
             return 0;
           });
           
+          // ตั้งค่า products เฉพาะสินค้าคงเหลือก่อน (จะถูกอัปเดตใน calculateInventoryStats)
           setProducts(sortedProducts);
     } else {
           console.error('Error loading products:', response.data.message);
         }
         
-        // Calculate inventory statistics
+        // Calculate inventory statistics (after contract details are loaded)
+        console.log('🔍 Before calculateInventoryStats - contractDetails:', contractDetails);
         await calculateInventoryStats();
-        
-        // Load contract details
-        await loadContractDetails();
         
         setLoading(false);
       } catch (error) {
@@ -106,7 +108,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
 
   const loadContracts = async () => {
     try {
-      if (selectedBranch) {
+    if (selectedBranch) {
         const response = await contractsService.getAll(selectedBranch);
         const contractsData = response.data?.success ? response.data.data : (response.data || []);
         setContracts(contractsData);
@@ -128,11 +130,16 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
       const response = await contractsService.getAll(selectedBranch);
       const contractsData = response.data?.success ? response.data.data : (response.data || []);
       
+      console.log('🔍 loadContractDetails - raw response:', response.data);
+      console.log('🔍 loadContractDetails - contractsData:', contractsData);
+      
       // สร้าง mapping ระหว่าง product_id และ contract details
       const contractMap = {};
       contractsData.forEach(contract => {
-        if (contract.productId) { // ใช้ productId แทน product_id
-          contractMap[contract.productId] = {
+        // ตรวจสอบทั้ง productId และ product_id (API อาจส่งมาเป็น field ใด field หนึ่ง)
+        const productId = contract.productId || contract.product_id;
+        if (productId) {
+          contractMap[productId] = {
             contractNumber: contract.contractNumber,
             customerName: contract.customerName,
             totalAmount: contract.totalAmount,
@@ -142,6 +149,13 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
           };
         }
       });
+      
+      console.log('🔍 All contracts with productId/product_id:', contractsData.map(c => ({
+        contractNumber: c.contractNumber,
+        productId: c.productId,
+        product_id: c.product_id,
+        productName: c.productName
+      })));
       
       setContractDetails(contractMap);
       console.log('🔍 Contract details loaded:', contractMap);
@@ -165,6 +179,8 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
       
       if (response.data?.success && response.data.data) {
         const allItems = response.data.data;
+        
+        console.log('🔍 calculateInventoryStats - allItems from API:', allItems.length);
         
         // Calculate statistics
         const stats = {
@@ -209,17 +225,17 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
           stats.categories[category].value += (price * qty);
         });
         
-        // เพิ่มข้อมูลสัญญา
-        stats.contractsCount = Object.keys(contractMap).length;
-        stats.itemsWithContracts = allItems.filter(item => contractMap[item.id]).length;
+        // เพิ่มข้อมูลสัญญา - ใช้ contractDetails state แทน contractMap
+        console.log('🔍 calculateInventoryStats - contractDetails:', contractDetails);
+        console.log('🔍 calculateInventoryStats - allItems length:', allItems.length);
+        stats.contractsCount = Object.keys(contractDetails).length;
+        stats.itemsWithContracts = allItems.filter(item => contractDetails[item.id]).length;
         
-        // เพิ่มสินค้าที่ทำสัญญาไปแล้ว (แต่ไม่อยู่ในคลังปัจจุบัน)
-        const soldItemsCount = Object.keys(contractMap).length - stats.itemsWithContracts;
-        stats.soldItemsCount = soldItemsCount;
+        console.log('🔍 Creating soldItems - contractDetails keys:', Object.keys(contractDetails));
+        console.log('🔍 Creating soldItems - allItems IDs:', allItems.map(item => item.id));
         
         // เพิ่มสินค้าที่ทำสัญญาไปแล้วเข้าไปในรายการสินค้า
-        const soldItems = Object.entries(contractMap)
-          .filter(([productId, contract]) => !allItems.find(item => item.id == productId))
+        const soldItems = Object.entries(contractDetails)
           .map(([productId, contract]) => ({
             id: parseInt(productId),
             product_name: contract.productName,
@@ -237,6 +253,12 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
             sequence: `S${productId}`,
             isSoldItem: true // เพิ่ม flag เพื่อระบุว่าเป็นสินค้าที่ขายไปแล้ว
           }));
+        
+        console.log('🔍 Created soldItems:', soldItems);
+        
+        // คำนวณสถิติที่ถูกต้อง
+        stats.soldItemsCount = soldItems.length;
+        stats.totalContractedItems = stats.itemsWithContracts + stats.soldItemsCount;
         
         // รวมสินค้าคงเหลือและสินค้าที่ขายไปแล้ว
         const allProductsWithSold = [...allItems, ...soldItems];
@@ -256,6 +278,8 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
         });
         
         // อัปเดต products state ให้รวมสินค้าที่ขายไปแล้ว
+        console.log('🔍 Final products state - allItems:', allItems.length, 'soldItems:', soldItems.length);
+        console.log('🔍 Final products state - total:', sortedAllProducts.length);
         setProducts(sortedAllProducts);
         
         setInventoryStats(stats);
@@ -720,7 +744,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">สินค้าที่ทำสัญญา</p>
+              <p className="text-sm font-medium text-gray-600">สินค้าที่ทำสัญญา (คงเหลือ)</p>
               <p className="text-2xl font-bold text-indigo-600">{inventoryStats.itemsWithContracts}</p>
             </div>
             <div className="p-2 bg-indigo-100 rounded-lg">
@@ -732,11 +756,23 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">สินค้าที่ขายไปแล้ว</p>
-              <p className="text-2xl font-bold text-red-600">{inventoryStats.soldItemsCount || 0}</p>
+              <p className="text-sm font-medium text-gray-600">สินค้าที่ทำสัญญา (ขายแล้ว)</p>
+              <p className="text-2xl font-bold text-blue-600">{inventoryStats.soldItemsCount || 0}</p>
             </div>
-            <div className="p-2 bg-red-100 rounded-lg">
-              <Package className="w-6 h-6 text-red-600" />
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Package className="w-6 h-6 text-blue-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">รวมสินค้าที่ทำสัญญา</p>
+              <p className="text-2xl font-bold text-green-600">{inventoryStats.totalContractedItems || 0}</p>
+            </div>
+            <div className="p-2 bg-green-100 rounded-lg">
+              <CheckCircle className="w-6 h-6 text-green-600" />
             </div>
           </div>
         </div>
@@ -912,20 +948,20 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                   animate={{ opacity: 1 }}
                   className={`transition-colors ${
                     product.isSoldItem 
-                      ? 'bg-red-50 hover:bg-red-100' 
+                      ? 'bg-blue-50 hover:bg-blue-100' 
                       : 'hover:bg-gray-50'
                   }`}
                 >
                   <td className="px-4 py-3 text-sm text-gray-900 font-medium">
                     {product.isSoldItem ? (
-                      <span className="text-red-600 font-medium">S{product.id}</span>
+                      <span className="text-blue-600 font-medium">S{product.id}</span>
                     ) : (
                       product.sequence
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
                     {product.isSoldItem ? (
-                      <span className="text-red-600 font-medium">
+                      <span className="text-blue-600 font-medium">
                         {product.receive_date ? new Date(product.receive_date).toLocaleDateString('th-TH') : '-'}
                             </span>
                     ) : (
@@ -934,14 +970,14 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
                     {product.isSoldItem ? (
-                      <span className="text-red-600 font-medium">S{product.id}</span>
+                      <span className="text-blue-600 font-medium">S{product.id}</span>
                     ) : (
                       product.product_code || '-'
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate" title={product.display_name}>
                     {product.isSoldItem ? (
-                      <span className="text-red-600 font-medium">{product.display_name}</span>
+                      <span className="text-blue-600 font-medium">{product.display_name}</span>
                     ) : (
                       product.display_name
                     )}
@@ -958,11 +994,11 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                       if (product.isSoldItem) {
                         return (
                           <div className="space-y-1">
-                            <div className="font-medium text-red-600">
+                            <div className="font-medium text-blue-600">
                               {product.contract_number}
                             </div>
-                            <div className="text-xs text-gray-600">
-                              ขายไปแล้ว
+                            <div className="text-xs text-blue-600">
+                              ทำสัญญาแล้ว
                             </div>
                           </div>
                         );
@@ -985,17 +1021,21 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                                 ฿{parseFloat(contractInfo.totalAmount).toLocaleString()}
                               </div>
                             )}
+                            <div className="text-xs text-blue-600">
+                              ทำสัญญาแล้ว
+                            </div>
                           </div>
                         );
                       } else if (product.contract_number && product.contract_number !== '-') {
                         return (
-                          <button
-                            onClick={() => handleContractClick(product.contract_number)}
-                            className="text-red-600 font-medium hover:text-red-800 hover:underline cursor-pointer transition-colors"
-                            title="คลิกเพื่อดูตารางผ่อน"
-                          >
-                            {product.contract_number}
-                          </button>
+                          <div className="space-y-1">
+                            <div className="font-medium text-blue-600">
+                              {product.contract_number}
+                            </div>
+                            <div className="text-xs text-blue-600">
+                              ทำสัญญาแล้ว
+                            </div>
+                          </div>
                         );
                       } else {
                         return (
@@ -1015,7 +1055,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
                     {product.isSoldItem ? (
-                      <span className="text-red-600 font-medium">
+                      <span className="text-blue-600 font-medium">
                         {product.receive_date ? new Date(product.receive_date).toLocaleDateString('th-TH') : '-'}
                       </span>
                     ) : (
@@ -1031,7 +1071,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
                     {product.isSoldItem ? (
-                      <span className="text-red-600 font-medium">0</span>
+                      <span className="text-blue-600 font-medium">0</span>
                     ) : (
                       product.remaining_quantity1
                     )}
@@ -1045,48 +1085,56 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
                     {product.isSoldItem ? (
-                      <span className="text-red-600 font-medium">1</span>
+                      <span className="text-blue-600 font-medium">1</span>
                     ) : (
                       product.sold_quantity || '-'
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
                     {product.isSoldItem ? (
-                      <span className="text-red-600 font-medium">0</span>
+                      <span className="text-blue-600 font-medium">0</span>
                     ) : (
                       product.remaining_quantity2
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate" title={product.remarks}>
                     {product.isSoldItem ? (
-                      <span className="text-red-600 font-medium">
-                        ขายไปแล้ว - สัญญา {product.contract_number}
+                      <span className="text-blue-600 font-medium">
+                        ทำสัญญาแล้ว - {product.contract_number}
                       </span>
                     ) : product.remarks ? (
-                      <span className={product.remarks.includes('มาวันที่') ? 'text-red-600' : ''}>
+                      <span className="text-gray-600">
                         {product.remarks}
-                      </span>
+                            </span>
                     ) : (
                       '-'
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    {product.isSoldItem ? (
-                      <div className="text-center">
-                        <span className="text-xs text-red-600 font-medium bg-red-50 px-2 py-1 rounded">
-                          ขายแล้ว
-                        </span>
-                        </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => editProduct(product)}
-                          className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
+                    {(() => {
+                      // ตรวจสอบว่าสินค้านี้มีสัญญาหรือไม่
+                      const contractInfo = contractDetails[product.id];
+                      const hasContract = contractInfo || (product.contract_number && product.contract_number !== '-');
+                      
+                      if (product.isSoldItem || hasContract) {
+                        return (
+                          <div className="text-center">
+                            <span className="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded">
+                              ทำสัญญาแล้ว
+                            </span>
+                          </div>
+                        );
+                      } else {
+                        return (
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => editProduct(product)}
+                              className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -1096,7 +1144,9 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
-                    )}
+                        );
+                      }
+                    })()}
                   </td>
                 </motion.tr>
               ))}

@@ -124,15 +124,27 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
     try {
       setLoading(true);
       console.log('🔍 Loading customer data for ID:', customerInfo.id);
+      console.log('🔍 Customer info:', customerInfo);
       
       // ดึงข้อมูลสัญญาของลูกค้า
       console.log('🔍 Calling getCustomerInstallment...');
+      // ส่ง customerId ที่เป็น code (เช่น F5350) ไปยัง backend
       const installmentResponse = await paymentScheduleService.getCustomerInstallment(customerInfo.id);
       console.log('✅ Installment response:', installmentResponse);
       
       if (installmentResponse.data?.success && installmentResponse.data.data.length > 0) {
         const installment = installmentResponse.data.data[0];
         console.log('✅ Found installment:', installment);
+        console.log('🔍 Contract number from API:', installment.contractNumber);
+        console.log('🔍 Expected contract number:', customerInfo.id);
+        
+        // ตรวจสอบว่าเลขที่สัญญาที่ได้ตรงกับที่ค้นหาหรือไม่
+        if (installment.contractNumber !== customerInfo.id) {
+          console.warn('⚠️ Contract number mismatch!');
+          console.warn('⚠️ Expected:', customerInfo.id);
+          console.warn('⚠️ Got:', installment.contractNumber);
+        }
+        
         setCustomerInstallment(installment);
         
         // ดึงรายการชำระเงิน
@@ -224,7 +236,13 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
     line: customerInstallment.line || customerInfo.line || 'N/A',
     inspector: customerInstallment.inspectorFullName || customerInfo.inspector || 'N/A',
     status: customerInstallment.status || customerInfo.status || 'active',
-    contractNumber: customerInstallment.contractNumber || 'N/A' // Add contractNumber
+    contractNumber: customerInstallment.contractNumber || 'N/A', // Add contractNumber
+    // ตรวจสอบและแก้ไขเลขที่สัญญาให้ตรงกับที่ค้นหา
+    _debugContractNumber: {
+      fromAPI: customerInstallment.contractNumber,
+      expected: customerInfo.id,
+      isMatch: customerInstallment.contractNumber === customerInfo.id
+    }
   } : {
     id: customerInfo.id || customerInfo.code || 'N/A',
     name: customerInfo.full_name || customerInfo.name || 'N/A',
@@ -261,7 +279,13 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
     line: customerInfo.line || 'N/A',
     inspector: customerInfo.inspector || 'N/A',
     status: customerInfo.status || 'active',
-    contractNumber: customerInfo.contract_number || 'N/A' // Add contractNumber
+    contractNumber: customerInfo.contract_number || 'N/A', // Add contractNumber
+    // ตรวจสอบและแก้ไขเลขที่สัญญาให้ตรงกับที่ค้นหา
+    _debugContractNumber: {
+      fromAPI: customerInfo.contract_number,
+      expected: customerInfo.id,
+      isMatch: customerInfo.contract_number === customerInfo.id
+    }
   };
 
   // Calculate totals and progress
@@ -1114,6 +1138,13 @@ const PaymentSchedulePage = ({ customer, onBack, customerData }) => {
                         <div>
                           <p className="font-medium text-gray-900">{mappedCustomerInfo.name}</p>
                           <p className="text-sm text-gray-500">เลขที่สัญญา: {mappedCustomerInfo.contractNumber}</p>
+                          {mappedCustomerInfo._debugContractNumber && (
+                            <p className="text-xs text-red-500">
+                              Debug: {mappedCustomerInfo._debugContractNumber.isMatch ? '✅' : '❌'} 
+                              Expected: {mappedCustomerInfo._debugContractNumber.expected} | 
+                              Got: {mappedCustomerInfo._debugContractNumber.fromAPI}
+                            </p>
+                          )}
                         </div>
                       </div>
                       
