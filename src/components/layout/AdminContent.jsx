@@ -27,7 +27,8 @@ const AdminContent = ({
   currentBranch,
   customerData,
   onBack,
-  onViewPaymentSchedule
+  onViewPaymentSchedule,
+  currentUser
 }) => {
 
   const renderContent = () => {

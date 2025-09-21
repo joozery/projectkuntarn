@@ -62,6 +62,7 @@ const AdminLayout = ({
           customerData={customerData}
           onBack={handleBack}
           onViewPaymentSchedule={handleViewPaymentSchedule}
+          currentUser={currentUser}
         />
       </div>
     </div>

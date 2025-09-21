@@ -1,10 +1,37 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, Database, Bell, Shield, Palette, Globe } from 'lucide-react';
+import { Settings, Database, Bell, Shield, Palette, Globe, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 
 const SettingsPage = () => {
+  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
+
+  // Check maintenance status on load
+  useEffect(() => {
+    const maintenanceStatus = localStorage.getItem('simple_maintenance_mode');
+    setIsMaintenanceMode(maintenanceStatus === 'true');
+  }, []);
+
+  const handleMaintenanceToggle = () => {
+    const newStatus = !isMaintenanceMode;
+    setIsMaintenanceMode(newStatus);
+    localStorage.setItem('simple_maintenance_mode', newStatus.toString());
+    
+    toast({
+      title: newStatus ? "🔧 เปิดโหมด Maintenance แล้ว" : "✅ ปิดโหมด Maintenance แล้ว",
+      description: newStatus ? "ผู้ใช้จะเห็นหน้า maintenance" : "ระบบกลับสู่การใช้งานปกติ",
+      variant: "default"
+    });
+
+    // Refresh page after 2 seconds to show maintenance mode
+    if (newStatus) {
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    }
+  };
+
   const handleSettingChange = (setting) => {
     toast({
       title: "🚧 ฟีเจอร์นี้ยังไม่ได้ใช้งาน—แต่ไม่ต้องกังวล! คุณสามารถขอให้เพิ่มในข้อความถัดไป! 🚀",
@@ -115,6 +142,61 @@ const SettingsPage = () => {
           );
         })}
       </div>
+
+      {/* Maintenance Mode Control */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="bg-white rounded-lg shadow-sm border border-gray-200"
+      >
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-3">
+            <Wrench className="w-5 h-5" />
+            โหมด Maintenance
+          </h2>
+        </div>
+        
+        <div className="p-6">
+          <div className="flex items-center justify-between py-2">
+            <div>
+              <div className="font-medium text-gray-900">เปิด/ปิดหน้า Maintenance</div>
+              <div className="text-sm text-gray-500">
+                เมื่อเปิด ผู้ใช้จะเห็นหน้าแจ้งการปรับปรุงระบบ (Admin ยังเข้าได้ปกติ)
+              </div>
+            </div>
+            
+            <Button
+              variant={isMaintenanceMode ? "default" : "outline"}
+              onClick={handleMaintenanceToggle}
+              className={`${
+                isMaintenanceMode 
+                  ? "bg-orange-500 hover:bg-orange-600 text-white" 
+                  : "border-orange-300 text-orange-600 hover:bg-orange-50"
+              }`}
+            >
+              <Wrench className="w-4 h-4 mr-2" />
+              {isMaintenanceMode ? 'ปิด Maintenance' : 'เปิด Maintenance'}
+            </Button>
+          </div>
+          
+          {isMaintenanceMode && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg"
+            >
+              <div className="flex items-center gap-2 text-orange-700">
+                <Wrench className="w-4 h-4" />
+                <span className="font-medium">โหมด Maintenance เปิดอยู่</span>
+              </div>
+              <p className="text-sm text-orange-600 mt-1">
+                ผู้ใช้ทั่วไปจะเห็นหน้า maintenance แต่ Admin ยังสามารถเข้าใช้งานระบบได้ปกติ
+              </p>
+            </motion.div>
+          )}
+        </div>
+      </motion.div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">การดำเนินการระบบ</h2>

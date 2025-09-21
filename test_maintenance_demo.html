@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo - Maintenance Page</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    animation: {
+                        'spin': 'spin 1s linear infinite',
+                        'pulse': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) translateX(0px); }
+            33% { transform: translateY(-20px) translateX(10px); }
+            66% { transform: translateY(10px) translateX(-15px); }
+        }
+        .float-animation { animation: float 6s ease-in-out infinite; }
+        
+        @keyframes float-delayed {
+            0%, 100% { transform: translateY(0px) translateX(0px); }
+            33% { transform: translateY(20px) translateX(-10px); }
+            66% { transform: translateY(-15px) translateX(20px); }
+        }
+        .float-delayed { animation: float-delayed 8s ease-in-out infinite 2s; }
+        
+        @keyframes float-slow {
+            0%, 100% { transform: translateY(0px) translateX(0px); }
+            50% { transform: translateY(-15px) translateX(20px); }
+        }
+        .float-slow { animation: float-slow 7s ease-in-out infinite 4s; }
+    </style>
+</head>
+<body>
+    <div class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
+        <div class="max-w-4xl mx-auto text-center">
+            <!-- Main Icon -->
+            <div class="mb-8">
+                <div class="relative inline-block">
+                    <div class="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full blur-2xl opacity-30 animate-pulse"></div>
+                    <div class="relative bg-white rounded-full p-6 shadow-2xl">
+                        <svg class="w-16 h-16 text-blue-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Title -->
+            <div class="mb-6">
+                <h1 class="text-4xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-4">
+                    กำลังปรับปรุงระบบ
+                </h1>
+                <p class="text-xl md:text-2xl text-gray-600 font-medium">
+                    เรากำลังอัพเดทเวอร์ชั่นใหม่เพื่อประสบการณ์ที่ดีกว่า
+                </p>
+            </div>
+
+            <!-- Loading Animation -->
+            <div class="mb-8">
+                <div class="flex items-center justify-center space-x-2 mb-4">
+                    <svg class="w-5 h-5 text-blue-500 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <span class="text-blue-600 font-medium">กำลังดำเนินการ...</span>
+                </div>
+                
+                <!-- Progress Bar -->
+                <div class="w-full max-w-md mx-auto bg-gray-200 rounded-full h-2 mb-4">
+                    <div class="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-2000 ease-in-out" 
+                         style="width: 75%; animation: progressFill 3s ease-in-out;">
+                    </div>
+                </div>
+                <p class="text-sm text-gray-500">ความคืบหน้า: 75%</p>
+            </div>
+
+            <!-- Features -->
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">สิ่งที่จะได้รับในเวอร์ชั่นใหม่</h2>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+                        <div class="text-blue-600 mb-3 flex justify-center">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="font-semibold text-gray-800 mb-2">ประสิทธิภาพที่ดีขึ้น</h3>
+                        <p class="text-sm text-gray-600">ปรับปรุงความเร็วและการตอบสนองของระบบ</p>
+                    </div>
+
+                    <div class="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+                        <div class="text-blue-600 mb-3 flex justify-center">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="font-semibold text-gray-800 mb-2">ความปลอดภัยเพิ่มขึ้น</h3>
+                        <p class="text-sm text-gray-600">เสริมความแข็งแกร่งของระบบรักษาความปลอดภัย</p>
+                    </div>
+
+                    <div class="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+                        <div class="text-blue-600 mb-3 flex justify-center">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="font-semibold text-gray-800 mb-2">ฟีเจอร์ใหม่</h3>
+                        <p class="text-sm text-gray-600">เพิ่มฟีเจอร์ใหม่ๆ ที่น่าสนใจและใช้งานง่ายขึ้น</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Time Estimate -->
+            <div class="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg max-w-md mx-auto mb-8">
+                <div class="flex items-center justify-center mb-3">
+                    <svg class="w-5 h-5 text-orange-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span class="font-semibold text-gray-800">เวลาที่คาดว่าจะเสร็จสิ้น</span>
+                </div>
+                <p class="text-2xl font-bold text-orange-600 mb-2">15-30 นาที</p>
+                <p class="text-sm text-gray-600">เราจะกลับมาให้บริการโดยเร็วที่สุด</p>
+            </div>
+
+            <!-- Contact Info -->
+            <div class="text-center">
+                <p class="text-gray-600 mb-4">หากมีข้อสงสัยหรือต้องการความช่วยเหลือเร่งด่วน</p>
+                <div class="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4">
+                    <a href="tel:+66123456789" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-medium rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-300 shadow-lg hover:shadow-xl">
+                        <span>โทร: 012-345-6789</span>
+                    </a>
+                    <a href="mailto:support@example.com" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl">
+                        <span>อีเมล: support@example.com</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="mt-12 text-center">
+                <div class="flex items-center justify-center text-gray-500 text-sm">
+                    <span>ขอบคุณที่รอคอย</span>
+                    <svg class="w-4 h-4 mx-2 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                    <span>เราจะกลับมาเร็วๆ นี้!</span>
+                </div>
+            </div>
+
+            <!-- Floating Elements -->
+            <div class="fixed inset-0 overflow-hidden pointer-events-none">
+                <div class="absolute top-20 left-10 w-20 h-20 bg-blue-200/30 rounded-full blur-xl float-animation"></div>
+                <div class="absolute top-40 right-20 w-16 h-16 bg-purple-200/30 rounded-full blur-xl float-delayed"></div>
+                <div class="absolute bottom-20 left-20 w-24 h-24 bg-indigo-200/30 rounded-full blur-xl float-slow"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Demo script to show dynamic progress
+        let progress = 75;
+        const progressBar = document.querySelector('.bg-gradient-to-r');
+        const progressText = document.querySelector('.text-sm.text-gray-500');
+        
+        setInterval(() => {
+            progress = Math.min(100, progress + Math.random() * 2);
+            if (progressBar && progressText) {
+                progressBar.style.width = progress + '%';
+                progressText.textContent = `ความคืบหน้า: ${Math.round(progress)}%`;
+            }
+            
+            if (progress >= 100) {
+                setTimeout(() => {
+                    alert('🎉 การอัพเดทเสร็จสิ้น! ระบบพร้อมใช้งานแล้ว');
+                }, 1000);
+            }
+        }, 3000);
+    </script>
+</body>
+</html>

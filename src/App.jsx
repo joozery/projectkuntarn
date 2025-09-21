@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Toaster } from '@/components/ui/toaster';
 import AdminLayout from '@/components/layout/AdminLayout';
 import LoginPage from '@/components/auth/LoginPage';
+import SimpleMaintenance from '@/components/SimpleMaintenance';
 import { branchesService } from '@/services/branchesService';
 import { authService } from '@/services/authService';
 import { toast } from '@/components/ui/use-toast';
@@ -13,10 +14,21 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
 
-  // Check authentication status on app start
+  // Check authentication status and maintenance mode on app start
   useEffect(() => {
     checkAuthStatus();
+    checkMaintenanceMode();
+  }, []);
+
+  // Check maintenance mode periodically (every 30 seconds)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      checkMaintenanceMode();
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Load branches when authenticated
@@ -40,6 +52,15 @@ function App() {
       authService.logout();
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkMaintenanceMode = () => {
+    try {
+      const maintenanceStatus = localStorage.getItem('simple_maintenance_mode') === 'true';
+      setIsMaintenanceMode(maintenanceStatus);
+    } catch (error) {
+      console.error('Error checking maintenance mode:', error);
     }
   };
 
@@ -81,6 +102,16 @@ function App() {
     setBranches([]);
     setSelectedBranch(null);
   };
+
+  // Show maintenance page first (except for admin users)
+  if (!currentUser || currentUser.role !== 'admin') {
+    return (
+      <>
+        <SimpleMaintenance />
+        <Toaster />
+      </>
+    );
+  }
 
   if (loading) {
     return (
