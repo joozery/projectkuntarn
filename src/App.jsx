@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Toaster } from '@/components/ui/toaster';
 import AdminLayout from '@/components/layout/AdminLayout';
 import LoginPage from '@/components/auth/LoginPage';
-import SimpleMaintenance from '@/components/SimpleMaintenance';
+import NotFound404 from '@/components/NotFound404';
 import { branchesService } from '@/services/branchesService';
 import { authService } from '@/services/authService';
 import { toast } from '@/components/ui/use-toast';
@@ -14,18 +14,18 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
+  const [is404Mode, setIs404Mode] = useState(false);
 
-  // Check authentication status and maintenance mode on app start
+  // Check authentication status and 404 mode on app start
   useEffect(() => {
     checkAuthStatus();
-    checkMaintenanceMode();
+    check404Mode();
   }, []);
 
-  // Check maintenance mode periodically (every 30 seconds)
+  // Check 404 mode periodically (every 30 seconds)
   useEffect(() => {
     const interval = setInterval(() => {
-      checkMaintenanceMode();
+      check404Mode();
     }, 30000);
 
     return () => clearInterval(interval);
@@ -55,12 +55,12 @@ function App() {
     }
   };
 
-  const checkMaintenanceMode = () => {
+  const check404Mode = () => {
     try {
-      const maintenanceStatus = localStorage.getItem('simple_maintenance_mode') === 'true';
-      setIsMaintenanceMode(maintenanceStatus);
+      const status404 = localStorage.getItem('simple_404_mode') === 'true';
+      setIs404Mode(status404);
     } catch (error) {
-      console.error('Error checking maintenance mode:', error);
+      console.error('Error checking 404 mode:', error);
     }
   };
 
@@ -103,11 +103,11 @@ function App() {
     setSelectedBranch(null);
   };
 
-  // Show maintenance page first (except for admin users)
+  // Show 404 page first (except for admin users)
   if (!currentUser || currentUser.role !== 'admin') {
     return (
       <>
-        <SimpleMaintenance />
+        <NotFound404 />
         <Toaster />
       </>
     );

@@ -1,30 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, Database, Bell, Shield, Palette, Globe, Wrench } from 'lucide-react';
+import { Settings, Database, Bell, Shield, Palette, Globe, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 
 const SettingsPage = () => {
-  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
+  const [is404Mode, setIs404Mode] = useState(false);
 
-  // Check maintenance status on load
+  // Check 404 status on load
   useEffect(() => {
-    const maintenanceStatus = localStorage.getItem('simple_maintenance_mode');
-    setIsMaintenanceMode(maintenanceStatus === 'true');
+    const status404 = localStorage.getItem('simple_404_mode');
+    setIs404Mode(status404 === 'true');
   }, []);
 
-  const handleMaintenanceToggle = () => {
-    const newStatus = !isMaintenanceMode;
-    setIsMaintenanceMode(newStatus);
-    localStorage.setItem('simple_maintenance_mode', newStatus.toString());
+  const handle404Toggle = () => {
+    const newStatus = !is404Mode;
+    setIs404Mode(newStatus);
+    localStorage.setItem('simple_404_mode', newStatus.toString());
     
     toast({
-      title: newStatus ? "🔧 เปิดโหมด Maintenance แล้ว" : "✅ ปิดโหมด Maintenance แล้ว",
-      description: newStatus ? "ผู้ใช้จะเห็นหน้า maintenance" : "ระบบกลับสู่การใช้งานปกติ",
+      title: newStatus ? "🚫 เปิดโหมด 404 แล้ว" : "✅ ปิดโหมด 404 แล้ว",
+      description: newStatus ? "ผู้ใช้จะเห็นหน้า 404" : "ระบบกลับสู่การใช้งานปกติ",
       variant: "default"
     });
 
-    // Refresh page after 2 seconds to show maintenance mode
+    // Refresh page after 2 seconds to show 404 mode
     if (newStatus) {
       setTimeout(() => {
         window.location.reload();
@@ -152,46 +152,46 @@ const SettingsPage = () => {
       >
         <div className="p-6 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-3">
-            <Wrench className="w-5 h-5" />
-            โหมด Maintenance
+            <AlertTriangle className="w-5 h-5" />
+            โหมด 404
           </h2>
         </div>
         
         <div className="p-6">
           <div className="flex items-center justify-between py-2">
             <div>
-              <div className="font-medium text-gray-900">เปิด/ปิดหน้า Maintenance</div>
+              <div className="font-medium text-gray-900">เปิด/ปิดหน้า 404</div>
               <div className="text-sm text-gray-500">
-                เมื่อเปิด ผู้ใช้จะเห็นหน้าแจ้งการปรับปรุงระบบ (Admin ยังเข้าได้ปกติ)
+                เมื่อเปิด ผู้ใช้จะเห็นหน้า 404 Not Found (Admin ยังเข้าได้ปกติ)
               </div>
             </div>
             
             <Button
-              variant={isMaintenanceMode ? "default" : "outline"}
-              onClick={handleMaintenanceToggle}
+              variant={is404Mode ? "default" : "outline"}
+              onClick={handle404Toggle}
               className={`${
-                isMaintenanceMode 
-                  ? "bg-orange-500 hover:bg-orange-600 text-white" 
-                  : "border-orange-300 text-orange-600 hover:bg-orange-50"
+                is404Mode 
+                  ? "bg-red-500 hover:bg-red-600 text-white" 
+                  : "border-red-300 text-red-600 hover:bg-red-50"
               }`}
             >
-              <Wrench className="w-4 h-4 mr-2" />
-              {isMaintenanceMode ? 'ปิด Maintenance' : 'เปิด Maintenance'}
+              <AlertTriangle className="w-4 h-4 mr-2" />
+              {is404Mode ? 'ปิด 404' : 'เปิด 404'}
             </Button>
           </div>
           
-          {isMaintenanceMode && (
+          {is404Mode && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
-              className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg"
+              className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg"
             >
-              <div className="flex items-center gap-2 text-orange-700">
-                <Wrench className="w-4 h-4" />
-                <span className="font-medium">โหมด Maintenance เปิดอยู่</span>
+              <div className="flex items-center gap-2 text-red-700">
+                <AlertTriangle className="w-4 h-4" />
+                <span className="font-medium">โหมด 404 เปิดอยู่</span>
               </div>
-              <p className="text-sm text-orange-600 mt-1">
-                ผู้ใช้ทั่วไปจะเห็นหน้า maintenance แต่ Admin ยังสามารถเข้าใช้งานระบบได้ปกติ
+              <p className="text-sm text-red-600 mt-1">
+                ผู้ใช้ทั่วไปจะเห็นหน้า 404 Not Found แต่ Admin ยังสามารถเข้าใช้งานระบบได้ปกติ
               </p>
             </motion.div>
           )}
