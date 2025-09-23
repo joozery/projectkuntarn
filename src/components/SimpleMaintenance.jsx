@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Wrench, Clock, RefreshCw, Zap, Shield, Sparkles } from 'lucide-react';
+import { Trash2, Clock, RefreshCw, Zap, Shield, Sparkles } from 'lucide-react';
 
 const SimpleMaintenance = () => {
   return (
@@ -15,7 +15,7 @@ const SimpleMaintenance = () => {
         >
           <div className="relative inline-block">
             <motion.div 
-              className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full blur-2xl opacity-30"
+              className="absolute inset-0 bg-gradient-to-r from-red-400 to-orange-500 rounded-full blur-2xl opacity-30"
               animate={{ 
                 scale: [1, 1.2, 1],
                 opacity: [0.3, 0.6, 0.3]
@@ -27,7 +27,7 @@ const SimpleMaintenance = () => {
               animate={{ 
                 boxShadow: [
                   "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-                  "0 25px 50px -12px rgba(59, 130, 246, 0.5)",
+                  "0 25px 50px -12px rgba(239, 68, 68, 0.5)",
                   "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
                 ]
               }}
@@ -37,7 +37,7 @@ const SimpleMaintenance = () => {
                 animate={{ rotate: [0, 10, -10, 0] }}
                 transition={{ duration: 4, repeat: Infinity }}
               >
-                <Wrench className="w-16 h-16 text-blue-600 mx-auto" />
+                <Trash2 className="w-16 h-16 text-red-600 mx-auto" />
               </motion.div>
             </motion.div>
           </div>
@@ -50,11 +50,11 @@ const SimpleMaintenance = () => {
           transition={{ duration: 0.8, delay: 0.2 }}
           className="mb-6"
         >
-          <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-4">
-            กำลังปรับปรุงระบบ
+          <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-red-600 via-orange-600 to-yellow-600 bg-clip-text text-transparent mb-4">
+            กำลังลบไฟล์เซฟเวอร์ออกเพื่อติดตั้งใหม่
           </h1>
           <p className="text-xl md:text-2xl text-gray-600 font-medium">
-            เรากำลังอัพเดทเวอร์ชั่นใหม่เพื่อประสบการณ์ที่ดีกว่า
+            เรากำลังลบไฟล์เก่าออกจากเซฟเวอร์เพื่อติดตั้งระบบใหม่ทั้งหมด
           </p>
         </motion.div>
 
@@ -66,14 +66,14 @@ const SimpleMaintenance = () => {
           className="mb-8"
         >
           <div className="flex items-center justify-center space-x-2 mb-6">
-            <RefreshCw className="w-5 h-5 text-blue-500 animate-spin" />
-            <span className="text-blue-600 font-medium">กำลังดำเนินการ...</span>
+            <RefreshCw className="w-5 h-5 text-red-500 animate-spin" />
+            <span className="text-red-600 font-medium">กำลังลบไฟล์...</span>
           </div>
           
           {/* Animated Progress Bar */}
           <div className="w-full max-w-md mx-auto bg-gray-200 rounded-full h-3 mb-4 overflow-hidden">
             <motion.div
-              className="bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 h-3 rounded-full relative"
+              className="bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 h-3 rounded-full relative"
               animate={{ 
                 width: ["0%", "20%", "50%", "75%", "90%", "95%", "100%", "0%"]
               }}
@@ -93,40 +93,13 @@ const SimpleMaintenance = () => {
             </motion.div>
           </div>
           
-          {/* Dynamic Progress Text */}
-          <motion.p 
-            className="text-sm text-gray-500 mb-4"
-            animate={{ opacity: [0.5, 1, 0.5] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          >
-            ความคืบหน้า: <motion.span
-              animate={{ 
-                opacity: [0.7, 1, 0.7],
-                scale: [1, 1.1, 1]
-              }}
-              transition={{ duration: 1, repeat: Infinity }}
-            >
-              <motion.span
-                animate={{ 
-                  content: ["0%", "25%", "50%", "75%", "90%", "95%", "100%", "0%"]
-                }}
-                transition={{ 
-                  duration: 8, 
-                  repeat: Infinity,
-                  times: [0, 0.1, 0.3, 0.5, 0.7, 0.85, 0.95, 1]
-                }}
-              >
-                85%
-              </motion.span>
-            </motion.span>
-          </motion.p>
 
           {/* Loading Dots */}
           <div className="flex justify-center space-x-1 mb-6">
             {[0, 1, 2].map((index) => (
               <motion.div
                 key={index}
-                className="w-2 h-2 bg-blue-500 rounded-full"
+                className="w-2 h-2 bg-red-500 rounded-full"
                 animate={{
                   scale: [1, 1.5, 1],
                   opacity: [0.5, 1, 0.5]
@@ -144,12 +117,12 @@ const SimpleMaintenance = () => {
           <div className="flex justify-center mb-6">
             <div className="relative">
               <motion.div
-                className="w-16 h-16 border-4 border-blue-200 border-t-blue-500 rounded-full"
+                className="w-16 h-16 border-4 border-red-200 border-t-red-500 rounded-full"
                 animate={{ rotate: 360 }}
                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
               />
               <motion.div
-                className="absolute inset-0 w-16 h-16 border-4 border-transparent border-r-purple-500 rounded-full"
+                className="absolute inset-0 w-16 h-16 border-4 border-transparent border-r-orange-500 rounded-full"
                 animate={{ rotate: -360 }}
                 transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
               />
@@ -162,8 +135,8 @@ const SimpleMaintenance = () => {
             animate={{ scale: [1, 1.05, 1] }}
             transition={{ duration: 2, repeat: Infinity }}
           >
-            <p className="text-blue-600 font-medium">
-              🔄 กำลังอัพเดทระบบ...
+            <p className="text-red-600 font-medium">
+              🗑️ กำลังลบไฟล์เซฟเวอร์...
             </p>
           </motion.div>
         </motion.div>
@@ -175,7 +148,7 @@ const SimpleMaintenance = () => {
           transition={{ duration: 0.8, delay: 0.6 }}
           className="mb-8"
         >
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">สิ่งที่จะได้รับในเวอร์ชั่นใหม่</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">ประโยชน์ของการติดตั้งใหม่</h2>
           <div className="grid md:grid-cols-3 gap-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -194,8 +167,8 @@ const SimpleMaintenance = () => {
               >
                 <Zap className="w-6 h-6" />
               </motion.div>
-              <h3 className="font-semibold text-gray-800 mb-2">ประสิทธิภาพที่ดีขึ้น</h3>
-              <p className="text-sm text-gray-600">ปรับปรุงความเร็วและการตอบสนองของระบบ</p>
+              <h3 className="font-semibold text-gray-800 mb-2">ระบบสะอาดใหม่</h3>
+              <p className="text-sm text-gray-600">ลบไฟล์เก่าและติดตั้งระบบใหม่ทั้งหมดเพื่อประสิทธิภาพสูงสุด</p>
             </motion.div>
 
             <motion.div
@@ -215,8 +188,8 @@ const SimpleMaintenance = () => {
               >
                 <Shield className="w-6 h-6" />
               </motion.div>
-              <h3 className="font-semibold text-gray-800 mb-2">ความปลอดภัยเพิ่มขึ้น</h3>
-              <p className="text-sm text-gray-600">เสริมความแข็งแกร่งของระบบรักษาความปลอดภัย</p>
+              <h3 className="font-semibold text-gray-800 mb-2">ความปลอดภัยใหม่</h3>
+              <p className="text-sm text-gray-600">ติดตั้งระบบรักษาความปลอดภัยใหม่ล่าสุดและแข็งแกร่งกว่าเดิม</p>
             </motion.div>
 
             <motion.div
@@ -236,8 +209,8 @@ const SimpleMaintenance = () => {
               >
                 <Sparkles className="w-6 h-6" />
               </motion.div>
-              <h3 className="font-semibold text-gray-800 mb-2">ฟีเจอร์ใหม่</h3>
-              <p className="text-sm text-gray-600">เพิ่มฟีเจอร์ใหม่ๆ ที่น่าสนใจและใช้งานง่ายขึ้น</p>
+              <h3 className="font-semibold text-gray-800 mb-2">เทคโนโลยีใหม่</h3>
+              <p className="text-sm text-gray-600">ใช้เทคโนโลยีและฟีเจอร์ใหม่ล่าสุดที่ทันสมัยและเสถียรกว่า</p>
             </motion.div>
           </div>
         </motion.div>
@@ -274,14 +247,14 @@ const SimpleMaintenance = () => {
             }}
             transition={{ duration: 2, repeat: Infinity }}
           >
-            15-30 นาที
+            30-60 นาที
           </motion.p>
           <motion.p 
             className="text-sm text-gray-600"
             animate={{ opacity: [0.7, 1, 0.7] }}
             transition={{ duration: 3, repeat: Infinity }}
           >
-            เราจะกลับมาให้บริการโดยเร็วที่สุด
+            การติดตั้งใหม่จะใช้เวลานานกว่าเล็กน้อย แต่จะได้ระบบที่ดีกว่า
           </motion.p>
         </motion.div>
 
@@ -373,7 +346,7 @@ const SimpleMaintenance = () => {
         {/* Floating Elements */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
           <motion.div
-            className="absolute top-20 left-10 w-20 h-20 bg-blue-200/30 rounded-full blur-xl"
+            className="absolute top-20 left-10 w-20 h-20 bg-red-200/30 rounded-full blur-xl"
             animate={{
               y: [0, -20, 0],
               x: [0, 10, 0],
@@ -387,7 +360,7 @@ const SimpleMaintenance = () => {
             }}
           />
           <motion.div
-            className="absolute top-40 right-20 w-16 h-16 bg-purple-200/30 rounded-full blur-xl"
+            className="absolute top-40 right-20 w-16 h-16 bg-orange-200/30 rounded-full blur-xl"
             animate={{
               y: [0, 20, 0],
               x: [0, -15, 0],
@@ -402,7 +375,7 @@ const SimpleMaintenance = () => {
             }}
           />
           <motion.div
-            className="absolute bottom-20 left-20 w-24 h-24 bg-indigo-200/30 rounded-full blur-xl"
+            className="absolute bottom-20 left-20 w-24 h-24 bg-yellow-200/30 rounded-full blur-xl"
             animate={{
               y: [0, -15, 0],
               x: [0, 20, 0],
