@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // API Configuration
-const API_BASE_URL = "https://72-60-43-104.sslip.io/kuntarn/api";
+const API_BASE_URL = "http://localhost:1997/api";
 
 // Create axios instance
 const api = axios.create({

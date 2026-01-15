@@ -7,14 +7,14 @@ import { inventoryService } from '@/services/inventoryService';
 import { employeesService } from '@/services/employeesService';
 import { checkersService } from '@/services/checkersService';
 import { contractsService } from '@/services/contractsService';
-import { 
-  Calculator, 
-  FileText, 
-  User, 
-  Shield, 
-  Package, 
-  DollarSign, 
-  Calendar, 
+import {
+  Calculator,
+  FileText,
+  User,
+  Shield,
+  Package,
+  DollarSign,
+  Calendar,
   Percent,
   Check,
   UserCheck,
@@ -38,11 +38,11 @@ const FormSection = ({ title, icon, children }) => {
 const InputField = ({ label, value, onChange, placeholder, type = 'text', required = false }) => (
   <div>
     <label className="text-sm font-medium text-gray-700 mb-1 block">{label}{required && ' *'}</label>
-    <input 
-      type={type} 
-      value={value} 
-      onChange={onChange} 
-      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm" 
+    <input
+      type={type}
+      value={value}
+      onChange={onChange}
+      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
       placeholder={placeholder}
       required={required}
     />
@@ -50,7 +50,7 @@ const InputField = ({ label, value, onChange, placeholder, type = 'text', requir
 );
 
 const SelectField = ({ label, value, onChange, options, placeholder, required = false }) => (
-   <div>
+  <div>
     <label className="text-sm font-medium text-gray-700 mb-1 block">{label}{required && ' *'}</label>
     <select
       value={value}
@@ -75,7 +75,7 @@ const SearchableSelectField = ({ label, value, onChange, options, placeholder, r
 
   useEffect(() => {
     const filtered = options.filter(option => {
-      const searchText = option.searchText || 
+      const searchText = option.searchText ||
         `${option.name || ''} ${option.full_name || ''} ${option.fullName || ''} ${option.code || ''} ${option.nickname || ''} ${option.phone || ''} ${option.surname || ''} ${option.product_name || ''}`.toLowerCase();
       return searchText.includes(searchTerm.toLowerCase());
     });
@@ -145,7 +145,24 @@ const RadioGroup = ({ label, value, onChange, options }) => (
   </div>
 );
 
-const ContractEditForm = ({ 
+// Helper to format date as YYYY-MM-DD in local timezone
+const toLocalISOString = (dateInput) => {
+  if (!dateInput) return '';
+  // Check if it's just a day number (e.g. "5", "15") - return as is
+  if (/^\d{1,2}$/.test(dateInput)) return dateInput;
+
+  const date = new Date(dateInput);
+  if (isNaN(date.getTime())) return '';
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+
+
+const ContractEditForm = ({
   contractId,
   selectedBranch,
   onBack,
@@ -244,13 +261,13 @@ const ContractEditForm = ({
     console.log('🔍 Auto-fill effect triggered - productId:', contractForm.productId, 'allInventory length:', allInventory.length);
     console.log('🔍 contractForm.productId type:', typeof contractForm.productId);
     console.log('🔍 contractForm.productId value:', contractForm.productId);
-    
+
     if (contractForm.productId && allInventory.length > 0) {
       const selectedInventory = allInventory.find(item => item.id === parseInt(contractForm.productId));
       console.log('🔍 Looking for productId:', contractForm.productId, 'in inventory');
       console.log('🔍 Parsed productId:', parseInt(contractForm.productId));
       console.log('🔍 Found inventory item:', selectedInventory);
-      
+
       if (selectedInventory) {
         console.log('🔍 Auto-filling product details for:', selectedInventory);
         setContractForm(prev => ({
@@ -271,20 +288,30 @@ const ContractEditForm = ({
     }
   }, [contractForm.productId, allInventory]);
 
+  // Calculate totalAmount from payment plan (using useMemo to avoid infinite loops)
+  const calculatedTotalAmount = React.useMemo(() => {
+    const downPayment = parseFloat(contractForm.plan.downPayment) || 0;
+    const monthlyPayment = parseFloat(contractForm.plan.monthlyPayment) || 0;
+    const months = parseInt(contractForm.plan.months) || 0;
+
+    return downPayment + (monthlyPayment * months);
+  }, [contractForm.plan.downPayment, contractForm.plan.monthlyPayment, contractForm.plan.months]);
+
+
   // Load contract data
   useEffect(() => {
     const loadContract = async () => {
       if (!contractId) return;
-      
+
       try {
         setLoadingContract(true);
         console.log('🔍 Loading contract with ID:', contractId);
         const response = await contractsService.getById(contractId);
-        
+
         console.log('🔍 API Response:', response);
         console.log('🔍 API Response status:', response.status);
         console.log('🔍 API Response headers:', response.headers);
-        
+
         let contract;
         if (response.data?.success) {
           contract = response.data.data;
@@ -293,7 +320,7 @@ const ContractEditForm = ({
         } else {
           contract = response;
         }
-        
+
         console.log('🔍 Contract data:', contract);
         console.log('🔍 Contract data keys:', Object.keys(contract || {}));
         console.log('🔍 Contract contractNumber:', contract?.contractNumber);
@@ -311,6 +338,14 @@ const ContractEditForm = ({
         console.log('🔍 Contract customerNickname:', contract?.customerNickname);
         console.log('🔍 Contract guarantorIdCard:', contract?.guarantorIdCard);
         console.log('🔍 Contract guarantorNickname:', contract?.guarantorNickname);
+        console.log('🔍 Contract guarantorId:', contract?.guarantorId);
+        console.log('🔍 Contract guarantorDetails:', contract?.guarantorDetails);
+        console.log('🔍 Contract guarantorTitle:', contract?.guarantorTitle);
+        console.log('🔍 Contract guarantorName:', contract?.guarantorName);
+        console.log('🔍 Contract guarantorSurname:', contract?.guarantorSurname);
+        console.log('🔍 Contract guarantorAge:', contract?.guarantorAge);
+        console.log('🔍 Contract guarantorAddress:', contract?.guarantorAddress);
+        console.log('🔍 Contract guarantorPhone1:', contract?.guarantorPhone1);
         console.log('🔍 Contract productDetails:', contract?.productDetails);
         console.log('🔍 Contract plan:', contract?.plan);
         // เพิ่ม debug สำหรับ collector และ line
@@ -321,12 +356,12 @@ const ContractEditForm = ({
         console.log('🔍 Contract line type:', typeof contract?.line);
         console.log('🔍 Contract collectorId truthy:', !!contract?.collectorId);
         console.log('🔍 Contract line truthy:', !!contract?.line);
-        
+
         if (contract) {
           // Map contract data to form based on backend API structure
           const formData = {
             contractNumber: contract.contractNumber || '',
-            contractDate: contract.contractDate ? contract.contractDate.split('T')[0] : (contract.startDate ? contract.startDate.split('T')[0] : ''),
+            contractDate: toLocalISOString(contract.contractDate || contract.startDate),
             customerId: contract.customerId || '',
             customerDetails: {
               title: contract.customerDetails?.title || contract.customerTitle || 'นาย',
@@ -378,7 +413,7 @@ const ContractEditForm = ({
               downPayment: contract.plan?.downPayment || contract.downPayment || '',
               monthlyPayment: contract.plan?.monthlyPayment || contract.monthlyPayment || contract.installmentAmount || '',
               months: contract.plan?.months || contract.months || contract.installmentPeriod || '',
-              collectionDate: contract.plan?.collectionDate || contract.collectionDate || ''
+              collectionDate: toLocalISOString(contract.plan?.collectionDate || contract.collectionDate)
             },
             salespersonId: contract.salespersonId || '',
             inspectorId: contract.inspectorId || '',
@@ -389,7 +424,7 @@ const ContractEditForm = ({
             startDate: contract.startDate || '',
             endDate: contract.endDate || ''
           };
-          
+
           // เพิ่ม debug สำหรับ collector และ line mapping
           console.log('🔍 Collector and line mapping debug:');
           console.log('  - Original contract.collectorId:', contract.collectorId);
@@ -446,21 +481,21 @@ const ContractEditForm = ({
   useEffect(() => {
     const loadCustomers = async () => {
       if (!selectedBranch) return;
-      
+
       try {
         setLoadingCustomers(true);
         console.log('🔍 Loading customers for branch:', selectedBranch);
         const response = await customersService.getAll(selectedBranch);
-        
+
         console.log('🔍 Customers response:', response);
-        
+
         let customersData = [];
         if (response.data?.success && Array.isArray(response.data.data)) {
           customersData = response.data.data;
         } else if (Array.isArray(response.data)) {
           customersData = response.data;
         }
-        
+
         console.log('🔍 Processed customers data:', customersData);
         setAllCustomers(customersData);
       } catch (error) {
@@ -479,23 +514,23 @@ const ContractEditForm = ({
   useEffect(() => {
     const loadInventory = async () => {
       if (!selectedBranch) return;
-      
+
       try {
         setLoadingInventory(true);
         console.log('🔍 Loading inventory for branch:', selectedBranch);
         const response = await inventoryService.getAll({ branchId: selectedBranch });
-        
+
         console.log('🔍 Inventory response:', response);
         console.log('🔍 Inventory response status:', response.status);
         console.log('🔍 Inventory response data:', response.data);
-        
+
         let inventoryData = [];
         if (response.data?.success && Array.isArray(response.data.data)) {
           inventoryData = response.data.data;
         } else if (Array.isArray(response.data)) {
           inventoryData = response.data;
         }
-        
+
         console.log('🔍 Processed inventory data:', inventoryData);
         console.log('🔍 All inventory items:', inventoryData.length);
         console.log('🔍 Active inventory items:', inventoryData.filter(item => item.status === 'active' && Number(item.remaining_quantity1) > 0).length);
@@ -520,23 +555,23 @@ const ContractEditForm = ({
   useEffect(() => {
     const loadEmployees = async () => {
       if (!selectedBranch) return;
-      
+
       try {
         setLoadingEmployees(true);
         console.log('🔍 Loading employees for branch:', selectedBranch);
         const response = await employeesService.getAll(selectedBranch);
-        
+
         console.log('🔍 Employees response:', response);
         console.log('🔍 Employees response status:', response.status);
         console.log('🔍 Employees response data:', response.data);
-        
+
         let employeesData = [];
         if (response.data?.success && Array.isArray(response.data.data)) {
           employeesData = response.data.data;
         } else if (Array.isArray(response.data)) {
           employeesData = response.data;
         }
-        
+
         console.log('🔍 Processed employees data:', employeesData);
         setAllEmployees(employeesData);
       } catch (error) {
@@ -555,23 +590,23 @@ const ContractEditForm = ({
   useEffect(() => {
     const loadCheckers = async () => {
       if (!selectedBranch) return;
-      
+
       try {
         setLoadingCheckers(true);
         console.log('🔍 Loading checkers for branch:', selectedBranch);
         const response = await checkersService.getAll(selectedBranch);
-        
+
         console.log('🔍 Checkers response:', response);
         console.log('🔍 Checkers response status:', response.status);
         console.log('🔍 Checkers response data:', response.data);
-        
+
         let checkersData = [];
         if (response.data?.success && Array.isArray(response.data.data)) {
           checkersData = response.data.data;
         } else if (Array.isArray(response.data)) {
           checkersData = response.data;
         }
-        
+
         console.log('🔍 Processed checkers data:', checkersData);
         setAllCheckers(checkersData);
       } catch (error) {
@@ -591,14 +626,14 @@ const ContractEditForm = ({
   useEffect(() => {
     const loadCollectors = async () => {
       if (!selectedBranch) return;
-      
+
       try {
         setLoadingCollectors(true);
         console.log('🔍 Loading collectors for branch:', selectedBranch);
-        
+
         // Use employeesService and filter for collectors (same as ContractForm)
         const response = await employeesService.getAll(selectedBranch);
-        
+
         console.log('🔍 Collectors response:', response);
         console.log('🔍 Collectors response status:', response.status);
         console.log('🔍 Collectors response data:', response.data);
@@ -608,7 +643,7 @@ const ContractEditForm = ({
         console.log('🔍 Employees response.data.data length:', response.data?.data?.length);
         console.log('🔍 Employees response.data.data type:', typeof response.data?.data);
         console.log('🔍 Employees response.data.data isArray:', Array.isArray(response.data?.data));
-        
+
         let employeesData = [];
         if (response.data?.success && Array.isArray(response.data.data)) {
           employeesData = response.data.data;
@@ -619,19 +654,19 @@ const ContractEditForm = ({
         } else {
           console.log('⚠️ Unknown response format:', response);
         }
-        
+
         console.log('🔍 Processed employees data:', employeesData);
         console.log('🔍 Processed employees data length:', employeesData.length);
         if (employeesData.length > 0) {
           console.log('🔍 Sample employee:', employeesData[0]);
           console.log('🔍 Sample employee keys:', Object.keys(employeesData[0]));
         }
-        
+
         // Filter for collectors
-        const collectorsData = employeesData.filter(emp => 
+        const collectorsData = employeesData.filter(emp =>
           emp.position === 'collector' || emp.position === 'พนักงานเก็บเงิน'
         );
-        
+
         console.log('🔍 Processed collectors data:', collectorsData);
         console.log('🔍 Sample collectors:', collectorsData.slice(0, 3).map(emp => ({ id: emp.id, name: emp.name, position: emp.position, code: emp.code })));
         console.log('🔍 All collector IDs:', collectorsData.map(emp => emp.id));
@@ -659,23 +694,23 @@ const ContractEditForm = ({
   useEffect(() => {
     const loadContracts = async () => {
       if (!selectedBranch) return;
-      
+
       try {
         setLoadingContract(true); // Re-use loadingContract state
         console.log('🔍 Loading contracts for branch:', selectedBranch);
         const response = await contractsService.getAll(selectedBranch);
-        
+
         console.log('🔍 Contracts response:', response);
         console.log('🔍 Contracts response status:', response.status);
         console.log('🔍 Contracts response data:', response.data);
-        
+
         let contractsData = [];
         if (response.data?.success && Array.isArray(response.data.data)) {
           contractsData = response.data.data;
         } else if (Array.isArray(response.data)) {
           contractsData = response.data;
         }
-        
+
         console.log('🔍 Processed contracts data:', contractsData);
         console.log('🔍 Contracts with product_id:', contractsData.filter(c => c.product_id));
         setContracts(contractsData);
@@ -699,18 +734,18 @@ const ContractEditForm = ({
     console.log('🔍 contractForm.collectorId type:', typeof contractForm.collectorId);
     console.log('🔍 contractForm.collectorId value:', contractForm.collectorId);
     console.log('🔍 allCollectors sample:', allCollectors.slice(0, 3).map(c => ({ id: c.id, name: c.name, code: c.code, full_name: c.full_name })));
-    
+
     if (allCollectors.length > 0 && contractForm.line && !contractForm.collectorId) {
       // Try to find collector by line (code or name)
-      const foundCollector = allCollectors.find(collector => 
-        collector.code === contractForm.line || 
+      const foundCollector = allCollectors.find(collector =>
+        collector.code === contractForm.line ||
         collector.name === contractForm.line ||
         collector.full_name === contractForm.line
       );
-      
+
       console.log('🔍 Looking for collector with line:', contractForm.line);
       console.log('🔍 Found collector:', foundCollector);
-      
+
       if (foundCollector) {
         console.log('🔍 Mapping collectorId from line:', contractForm.line, 'to collectorId:', foundCollector.id);
         setContractForm(prev => ({
@@ -754,48 +789,49 @@ const ContractEditForm = ({
     }));
   };
 
+
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('🔍 ContractEditForm handleSubmit - contractForm:', contractForm);
-    
-    if (!contractForm.customerId || !contractForm.productId || !contractForm.salespersonId || !contractForm.inspectorId || !contractForm.collectorId) {
-      toast({
-        title: "กรุณากรอกข้อมูลให้ครบถ้วน",
-        description: "ลูกค้า, สินค้า, พนักงานขาย, ผู้ตรวจสอบ และพนักงานเก็บเงินเป็นข้อมูลที่จำเป็น",
-        variant: "destructive"
-      });
-      return;
-    }
+    console.log('🚀 handleSubmit called - Starting contract update...');
+    console.log('🔍 Current contractForm:', contractForm);
 
-    // Prepare data for API
-    const selectedProduct = allInventory.find(p => p.id === contractForm.productId);
+    const selectedProduct = allInventory.find(item => item.id === parseInt(contractForm.productId));
     const selectedCollector = allCollectors.find(c => c.id === contractForm.collectorId);
-    
+
+    // Calculate endDate using local time logic to avoid timezone shifts
+    const calculateEndDate = () => {
+      if (!contractForm.contractDate) return '';
+      const start = new Date(contractForm.contractDate);
+      const months = parseInt(contractForm.plan.months) || contractForm.installmentPeriod || 0;
+      // Add months
+      start.setMonth(start.getMonth() + months);
+      return toLocalISOString(start);
+    };
+
     const contractData = {
       ...contractForm,
       productName: selectedProduct?.name || contractForm.productDetails.name,
-      line: selectedCollector?.code || selectedCollector?.name || contractForm.line || '',
-      totalAmount: parseFloat(contractForm.productDetails.price) || contractForm.totalAmount,
+      line: contractForm.line || '',  // Keep original line value, don't construct new one
+      collectorId: contractForm.collectorId,  // Send collector_id separately
+      totalAmount: calculatedTotalAmount,
       installmentPeriod: parseInt(contractForm.plan.months) || contractForm.installmentPeriod,
       startDate: contractForm.contractDate,
-      endDate: (() => {
-        const start = new Date(contractForm.contractDate);
-        const months = parseInt(contractForm.plan.months) || contractForm.installmentPeriod;
-        start.setMonth(start.getMonth() + months);
-        return start.toISOString().split('T')[0];
-      })(),
+      endDate: calculateEndDate(),
       plan: {
         ...contractForm.plan,
-        monthlyPayment: parseFloat(contractForm.plan.monthlyPayment) || 0
+        monthlyPayment: parseFloat(contractForm.plan.monthlyPayment) || 0,
+        // Ensure collectionDate is also preserved correctly if it's a date string
+        collectionDate: contractForm.plan.collectionDate // Input type="number" usually for "Pay every X day", check if date string needed
       }
     };
 
     console.log('🔍 ContractEditForm handleSubmit - prepared contractData:', contractData);
-    
+
     try {
       setSubmitting(true);
       const response = await contractsService.update(contractId, contractData);
-      
+
       if (response.data?.success) {
         toast({
           title: "สำเร็จ",
@@ -806,10 +842,13 @@ const ContractEditForm = ({
         throw new Error(response.data?.message || 'เกิดข้อผิดพลาด');
       }
     } catch (error) {
-      console.error('Error updating contract:', error);
+      console.error('❌ Error updating contract:', error);
+      console.error('❌ Error response:', error.response?.data);
+      console.error('❌ Error status:', error.response?.status);
+      console.error('❌ Contract data sent:', contractData);
       toast({
         title: "เกิดข้อผิดพลาด",
-        description: error.message || "ไม่สามารถแก้ไขสัญญาได้",
+        description: error.response?.data?.message || error.message || "ไม่สามารถแก้ไขสัญญาได้",
         variant: "destructive"
       });
     } finally {
@@ -875,42 +914,39 @@ const ContractEditForm = ({
           กลับ
         </Button>
       </div>
-      
+
       <form onSubmit={handleSubmit} className="space-y-6">
 
         {/* Customer Section */}
         <FormSection title="รายละเอียดลูกค้า" icon={User}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <SearchableSelectField 
-              label="ค้นหาลูกค้า" 
-              value={contractForm.customerId} 
-              onChange={(e) => handleSelectChange('customerId', e.target.value)} 
-              options={allCustomers} 
-              placeholder={loadingCustomers ? "กำลังโหลดข้อมูล..." : "--พิมพ์ค้นหาลูกค้า--"} 
-              required
+            <SearchableSelectField
+              label="ค้นหาลูกค้า"
+              value={contractForm.customerId}
+              onChange={(e) => handleSelectChange('customerId', e.target.value)}
+              options={allCustomers}
+              placeholder={loadingCustomers ? "กำลังโหลดข้อมูล..." : "--พิมพ์ค้นหาลูกค้า--"}
             />
-            <SearchableSelectField 
-              label="ค้นหาผู้ค้ำ" 
-              value={contractForm.guarantorId} 
-              onChange={(e) => handleSelectChange('guarantorId', e.target.value)} 
-              options={allCustomers} 
+            <SearchableSelectField
+              label="ค้นหาผู้ค้ำ"
+              value={contractForm.guarantorId}
+              onChange={(e) => handleSelectChange('guarantorId', e.target.value)}
+              options={allCustomers}
               placeholder={loadingCustomers ? "กำลังโหลดข้อมูล..." : "--พิมพ์ค้นหาผู้ค้ำ--"}
             />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <InputField 
-              label="เลขสัญญา" 
-              value={contractForm.contractNumber} 
-              onChange={(e) => handleSelectChange('contractNumber', e.target.value)} 
-              placeholder="เลขสัญญา" 
-              required
+            <InputField
+              label="เลขสัญญา"
+              value={contractForm.contractNumber}
+              onChange={(e) => handleSelectChange('contractNumber', e.target.value)}
+              placeholder="เลขสัญญา"
             />
-            <InputField 
-              label="วันที่" 
-              type="date" 
-              value={contractForm.contractDate} 
-              onChange={(e) => handleSelectChange('contractDate', e.target.value)} 
-              required
+            <InputField
+              label="วันที่"
+              type="date"
+              value={contractForm.contractDate}
+              onChange={(e) => handleSelectChange('contractDate', e.target.value)}
             />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
@@ -922,19 +958,19 @@ const ContractEditForm = ({
               const lastName = nameParts.slice(1).join(' ') || '';
               handleDetailChange('customerDetails', 'name', firstName);
               handleDetailChange('customerDetails', 'surname', lastName);
-            }} placeholder="ชื่อ-สกุล" required/>
-            <InputField label="ชื่อเล่น" value={contractForm.customerDetails.nickname} onChange={(e) => handleDetailChange('customerDetails', 'nickname', e.target.value)} placeholder="ชื่อเล่น"/>
-            <InputField label="อายุ" value={contractForm.customerDetails.age} onChange={(e) => handleDetailChange('customerDetails', 'age', e.target.value)} placeholder="อายุ" type="number"/>
-            <InputField label="เลขบัตรประชาชน" value={contractForm.customerDetails.idCard} onChange={(e) => handleDetailChange('customerDetails', 'idCard', e.target.value)} placeholder="เลขบัตรประชาชน"/>
-            <InputField label="บ้านเลขที่" value={contractForm.customerDetails.address} onChange={(e) => handleDetailChange('customerDetails', 'address', e.target.value)} placeholder="บ้านเลขที่"/>
-            <InputField label="หมู่ที่" value={contractForm.customerDetails.moo} onChange={(e) => handleDetailChange('customerDetails', 'moo', e.target.value)} placeholder="หมู่ที่"/>
-            <InputField label="ถนน" value={contractForm.customerDetails.road} onChange={(e) => handleDetailChange('customerDetails', 'road', e.target.value)} placeholder="ถนน"/>
-            <InputField label="ตำบล/แขวง" value={contractForm.customerDetails.subdistrict} onChange={(e) => handleDetailChange('customerDetails', 'subdistrict', e.target.value)} placeholder="ตำบล/แขวง"/>
-            <InputField label="อำเภอ/เขต" value={contractForm.customerDetails.district} onChange={(e) => handleDetailChange('customerDetails', 'district', e.target.value)} placeholder="อำเภอ/เขต"/>
-            <InputField label="จังหวัด" value={contractForm.customerDetails.province} onChange={(e) => handleDetailChange('customerDetails', 'province', e.target.value)} placeholder="จังหวัด"/>
-            <InputField label="โทรศัพท์ 1" value={contractForm.customerDetails.phone1} onChange={(e) => handleDetailChange('customerDetails', 'phone1', e.target.value)} placeholder="เบอร์โทรศัพท์" required/>
-            <InputField label="โทรศัพท์ 2" value={contractForm.customerDetails.phone2} onChange={(e) => handleDetailChange('customerDetails', 'phone2', e.target.value)} placeholder="เบอร์โทรศัพท์สำรอง"/>
-            <InputField label="โทรศัพท์ 3" value={contractForm.customerDetails.phone3} onChange={(e) => handleDetailChange('customerDetails', 'phone3', e.target.value)} placeholder="เบอร์โทรศัพท์บ้าน"/>
+            }} placeholder="ชื่อ-สกุล" />
+            <InputField label="ชื่อเล่น" value={contractForm.customerDetails.nickname} onChange={(e) => handleDetailChange('customerDetails', 'nickname', e.target.value)} placeholder="ชื่อเล่น" />
+            <InputField label="อายุ" value={contractForm.customerDetails.age} onChange={(e) => handleDetailChange('customerDetails', 'age', e.target.value)} placeholder="อายุ" type="number" />
+            <InputField label="เลขบัตรประชาชน" value={contractForm.customerDetails.idCard} onChange={(e) => handleDetailChange('customerDetails', 'idCard', e.target.value)} placeholder="เลขบัตรประชาชน" />
+            <InputField label="บ้านเลขที่" value={contractForm.customerDetails.address} onChange={(e) => handleDetailChange('customerDetails', 'address', e.target.value)} placeholder="บ้านเลขที่" />
+            <InputField label="หมู่ที่" value={contractForm.customerDetails.moo} onChange={(e) => handleDetailChange('customerDetails', 'moo', e.target.value)} placeholder="หมู่ที่" />
+            <InputField label="ถนน" value={contractForm.customerDetails.road} onChange={(e) => handleDetailChange('customerDetails', 'road', e.target.value)} placeholder="ถนน" />
+            <InputField label="ตำบล/แขวง" value={contractForm.customerDetails.subdistrict} onChange={(e) => handleDetailChange('customerDetails', 'subdistrict', e.target.value)} placeholder="ตำบล/แขวง" />
+            <InputField label="อำเภอ/เขต" value={contractForm.customerDetails.district} onChange={(e) => handleDetailChange('customerDetails', 'district', e.target.value)} placeholder="อำเภอ/เขต" />
+            <InputField label="จังหวัด" value={contractForm.customerDetails.province} onChange={(e) => handleDetailChange('customerDetails', 'province', e.target.value)} placeholder="จังหวัด" />
+            <InputField label="โทรศัพท์ 1" value={contractForm.customerDetails.phone1} onChange={(e) => handleDetailChange('customerDetails', 'phone1', e.target.value)} placeholder="เบอร์โทรศัพท์" />
+            <InputField label="โทรศัพท์ 2" value={contractForm.customerDetails.phone2} onChange={(e) => handleDetailChange('customerDetails', 'phone2', e.target.value)} placeholder="เบอร์โทรศัพท์สำรอง" />
+            <InputField label="โทรศัพท์ 3" value={contractForm.customerDetails.phone3} onChange={(e) => handleDetailChange('customerDetails', 'phone3', e.target.value)} placeholder="เบอร์โทรศัพท์บ้าน" />
           </div>
         </FormSection>
 
@@ -950,18 +986,18 @@ const ContractEditForm = ({
               handleDetailChange('guarantorDetails', 'name', firstName);
               handleDetailChange('guarantorDetails', 'surname', lastName);
             }} placeholder="ชื่อ-สกุล" />
-            <InputField label="ชื่อเล่น" value={contractForm.guarantorDetails.nickname} onChange={(e) => handleDetailChange('guarantorDetails', 'nickname', e.target.value)} placeholder="ชื่อเล่น"/>
-            <InputField label="อายุ" value={contractForm.guarantorDetails.age} onChange={(e) => handleDetailChange('guarantorDetails', 'age', e.target.value)} placeholder="อายุ" type="number"/>
-            <InputField label="เลขบัตรประชาชน" value={contractForm.guarantorDetails.idCard} onChange={(e) => handleDetailChange('guarantorDetails', 'idCard', e.target.value)} placeholder="เลขบัตรประชาชน"/>
-            <InputField label="บ้านเลขที่" value={contractForm.guarantorDetails.address} onChange={(e) => handleDetailChange('guarantorDetails', 'address', e.target.value)} placeholder="บ้านเลขที่"/>
-            <InputField label="หมู่ที่" value={contractForm.guarantorDetails.moo} onChange={(e) => handleDetailChange('guarantorDetails', 'moo', e.target.value)} placeholder="หมู่ที่"/>
-            <InputField label="ถนน" value={contractForm.guarantorDetails.road} onChange={(e) => handleDetailChange('guarantorDetails', 'road', e.target.value)} placeholder="ถนน"/>
-            <InputField label="ตำบล/แขวง" value={contractForm.guarantorDetails.subdistrict} onChange={(e) => handleDetailChange('guarantorDetails', 'subdistrict', e.target.value)} placeholder="ตำบล/แขวง"/>
-            <InputField label="อำเภอ/เขต" value={contractForm.guarantorDetails.district} onChange={(e) => handleDetailChange('guarantorDetails', 'district', e.target.value)} placeholder="อำเภอ/เขต"/>
-            <InputField label="จังหวัด" value={contractForm.guarantorDetails.province} onChange={(e) => handleDetailChange('guarantorDetails', 'province', e.target.value)} placeholder="จังหวัด"/>
-            <InputField label="โทรศัพท์ 1" value={contractForm.guarantorDetails.phone1} onChange={(e) => handleDetailChange('guarantorDetails', 'phone1', e.target.value)} placeholder="เบอร์โทรศัพท์"/>
-            <InputField label="โทรศัพท์ 2" value={contractForm.guarantorDetails.phone2} onChange={(e) => handleDetailChange('guarantorDetails', 'phone2', e.target.value)} placeholder="เบอร์โทรศัพท์สำรอง"/>
-            <InputField label="โทรศัพท์ 3" value={contractForm.guarantorDetails.phone3} onChange={(e) => handleDetailChange('guarantorDetails', 'phone3', e.target.value)} placeholder="เบอร์โทรศัพท์บ้าน"/>
+            <InputField label="ชื่อเล่น" value={contractForm.guarantorDetails.nickname} onChange={(e) => handleDetailChange('guarantorDetails', 'nickname', e.target.value)} placeholder="ชื่อเล่น" />
+            <InputField label="อายุ" value={contractForm.guarantorDetails.age} onChange={(e) => handleDetailChange('guarantorDetails', 'age', e.target.value)} placeholder="อายุ" type="number" />
+            <InputField label="เลขบัตรประชาชน" value={contractForm.guarantorDetails.idCard} onChange={(e) => handleDetailChange('guarantorDetails', 'idCard', e.target.value)} placeholder="เลขบัตรประชาชน" />
+            <InputField label="บ้านเลขที่" value={contractForm.guarantorDetails.address} onChange={(e) => handleDetailChange('guarantorDetails', 'address', e.target.value)} placeholder="บ้านเลขที่" />
+            <InputField label="หมู่ที่" value={contractForm.guarantorDetails.moo} onChange={(e) => handleDetailChange('guarantorDetails', 'moo', e.target.value)} placeholder="หมู่ที่" />
+            <InputField label="ถนน" value={contractForm.guarantorDetails.road} onChange={(e) => handleDetailChange('guarantorDetails', 'road', e.target.value)} placeholder="ถนน" />
+            <InputField label="ตำบล/แขวง" value={contractForm.guarantorDetails.subdistrict} onChange={(e) => handleDetailChange('guarantorDetails', 'subdistrict', e.target.value)} placeholder="ตำบล/แขวง" />
+            <InputField label="อำเภอ/เขต" value={contractForm.guarantorDetails.district} onChange={(e) => handleDetailChange('guarantorDetails', 'district', e.target.value)} placeholder="อำเภอ/เขต" />
+            <InputField label="จังหวัด" value={contractForm.guarantorDetails.province} onChange={(e) => handleDetailChange('guarantorDetails', 'province', e.target.value)} placeholder="จังหวัด" />
+            <InputField label="โทรศัพท์ 1" value={contractForm.guarantorDetails.phone1} onChange={(e) => handleDetailChange('guarantorDetails', 'phone1', e.target.value)} placeholder="เบอร์โทรศัพท์" />
+            <InputField label="โทรศัพท์ 2" value={contractForm.guarantorDetails.phone2} onChange={(e) => handleDetailChange('guarantorDetails', 'phone2', e.target.value)} placeholder="เบอร์โทรศัพท์สำรอง" />
+            <InputField label="โทรศัพท์ 3" value={contractForm.guarantorDetails.phone3} onChange={(e) => handleDetailChange('guarantorDetails', 'phone3', e.target.value)} placeholder="เบอร์โทรศัพท์บ้าน" />
           </div>
         </FormSection>
 
@@ -975,16 +1011,16 @@ const ContractEditForm = ({
               <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-700 min-h-[80px] flex items-start">
                 {(() => {
                   // สินค้าที่บันทึกไว้ในสัญญา
-                  const selectedProduct = allInventory.find(item => 
+                  const selectedProduct = allInventory.find(item =>
                     String(item.id) === String(contractForm.productId)
                   );
-                  
+
                   console.log('🔍 Product display debug:');
                   console.log('  - contractForm.productId:', contractForm.productId);
                   console.log('  - allInventory length:', allInventory.length);
                   console.log('  - selectedProduct:', selectedProduct);
                   console.log('  - contractForm.productDetails:', contractForm.productDetails);
-                  
+
                   if (selectedProduct) {
                     return (
                       <div className="space-y-2">
@@ -998,7 +1034,7 @@ const ContractEditForm = ({
                             </span>
                           )}
                         </div>
-                        
+
                         {/* รายละเอียดเพิ่มเติม */}
                         <div className="text-xs text-gray-600 space-y-1 ml-6">
                           {selectedProduct.product_model && (
@@ -1047,98 +1083,104 @@ const ContractEditForm = ({
                 })()}
               </div>
             </div>
-            
+
             {/* ช่องค้นหาสินค้า */}
             {(() => {
               // สินค้าที่ active และมี stock
-              const activeInventory = allInventory.filter(item => 
+              const activeInventory = allInventory.filter(item =>
                 item.status === 'active' && Number(item.remaining_quantity1) > 0
               );
-              
+
               // สินค้าที่บันทึกไว้ในสัญญา (แม้จะไม่อยู่ใน active)
-              const selectedProduct = allInventory.find(item => 
+              const selectedProduct = allInventory.find(item =>
                 String(item.id) === String(contractForm.productId)
               );
-              
+
               console.log('🔍 Product selection debug:');
               console.log('  - contractForm.productId:', contractForm.productId);
               console.log('  - selectedProduct:', selectedProduct);
               console.log('  - activeInventory count:', activeInventory.length);
               console.log('  - allInventory count:', allInventory.length);
-              
+
               // รวม options โดยให้สินค้าที่บันทึกไว้อยู่ข้างหน้า
-              const productOptions = selectedProduct && !activeInventory.some(item => 
+              const productOptions = selectedProduct && !activeInventory.some(item =>
                 String(item.id) === String(selectedProduct.id)
-              ) 
+              )
                 ? [selectedProduct, ...activeInventory]
                 : activeInventory;
-              
+
               console.log('🔍 Product options:', productOptions.map(item => ({ id: item.id, product_name: item.product_name, status: item.status })));
-              
+
               return (
-                <SearchableSelectField 
-                  label="ค้นหาสินค้า" 
-                  value={contractForm.productId} 
-                  onChange={(e) => handleSelectChange('productId', e.target.value)} 
+                <SearchableSelectField
+                  label="ค้นหาสินค้า"
+                  value={contractForm.productId}
+                  onChange={(e) => handleSelectChange('productId', e.target.value)}
                   options={productOptions.map(item => ({
                     ...item,
                     displayName: item.product_name || item.name || '',
                     searchText: `${item.product_name || ''} ${item.product_code || ''}`.trim()
                   }))}
-                  placeholder={loadingInventory ? "กำลังโหลดข้อมูล..." : "--พิมพ์ค้นหาสินค้า--"} 
-                  required
+                  placeholder={loadingInventory ? "กำลังโหลดข้อมูล..." : "--พิมพ์ค้นหาสินค้า--"}
                 />
               );
             })()}
           </div>
-          
+
           {/* แถวที่สอง: รายละเอียดสินค้าอื่นๆ */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <InputField label="ราคารวม" value={contractForm.productDetails.price} onChange={(e) => handleDetailChange('productDetails', 'price', e.target.value)} placeholder="ราคารวม" type="number" />
-            <InputField label="รุ่น" value={contractForm.productDetails.model} onChange={(e) => handleDetailChange('productDetails', 'model', e.target.value)} placeholder="รุ่น"/>
-            <InputField label="S/N" value={contractForm.productDetails.serialNumber} onChange={(e) => handleDetailChange('productDetails', 'serialNumber', e.target.value)} placeholder="Serial Number"/>
-            <InputField label="ดาวน์" value={contractForm.plan.downPayment} onChange={(e) => handleDetailChange('plan', 'downPayment', e.target.value)} placeholder="เงินดาวน์" type="number"/>
-            <InputField label="ผ่อน/เดือน" value={contractForm.plan.monthlyPayment} onChange={(e) => handleDetailChange('plan', 'monthlyPayment', e.target.value)} placeholder="ผ่อนต่อเดือน" type="number" required/>
-            <InputField label="จำนวนงวด" value={contractForm.plan.months} onChange={(e) => handleDetailChange('plan', 'months', e.target.value)} placeholder="จำนวนเดือน" type="number" required/>
-            <InputField 
-              label="เก็บทุกวันที่" 
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">ราคารวม (คำนวณอัตโนมัติ)</label>
+              <input
+                type="text"
+                value={`฿${calculatedTotalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                readOnly
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed text-sm font-semibold"
+                placeholder="คำนวณจากเงินดาวน์ + ผ่อน"
+              />
+            </div>
+            <InputField label="รุ่น" value={contractForm.productDetails.model} onChange={(e) => handleDetailChange('productDetails', 'model', e.target.value)} placeholder="รุ่น" />
+            <InputField label="S/N" value={contractForm.productDetails.serialNumber} onChange={(e) => handleDetailChange('productDetails', 'serialNumber', e.target.value)} placeholder="Serial Number" />
+            <InputField label="ดาวน์" value={contractForm.plan.downPayment} onChange={(e) => handleDetailChange('plan', 'downPayment', e.target.value)} placeholder="เงินดาวน์" type="number" />
+            <InputField label="ผ่อน/เดือน" value={contractForm.plan.monthlyPayment} onChange={(e) => handleDetailChange('plan', 'monthlyPayment', e.target.value)} placeholder="ผ่อนต่อเดือน" type="number" />
+            <InputField label="จำนวนงวด" value={contractForm.plan.months} onChange={(e) => handleDetailChange('plan', 'months', e.target.value)} placeholder="จำนวนเดือน" type="number" />
+            <InputField
+              label="เก็บทุกวันที่"
               type="date"
-              value={contractForm.plan.collectionDate ? contractForm.plan.collectionDate.split('T')[0] : ''} 
-              onChange={(e) => handleDetailChange('plan', 'collectionDate', e.target.value)} 
+              value={contractForm.plan.collectionDate ? contractForm.plan.collectionDate.split('T')[0] : ''}
+              onChange={(e) => handleDetailChange('plan', 'collectionDate', e.target.value)}
               placeholder="ว-ด-ป เช่น 31-12-2564"
             />
           </div>
         </FormSection>
-        
+
         {/* Employee Section */}
         <FormSection title="พนักงาน" icon={UserCheck}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <SearchableSelectField 
-              label="พนักงานขาย" 
-              value={contractForm.salespersonId} 
-              onChange={(e) => handleSelectChange('salespersonId', e.target.value)} 
-              options={allEmployees} 
-              placeholder={loadingEmployees ? "กำลังโหลดข้อมูล..." : "--เลือกพนักงานขาย--"} 
-              required
+            <SearchableSelectField
+              label="พนักงานขาย"
+              value={contractForm.salespersonId}
+              onChange={(e) => handleSelectChange('salespersonId', e.target.value)}
+              options={allEmployees}
+              placeholder={loadingEmployees ? "กำลังโหลดข้อมูล..." : "--เลือกพนักงานขาย--"}
             />
-            <SearchableSelectField 
-              label="ผู้ตรวจสอบ" 
-              value={contractForm.inspectorId} 
-              onChange={(e) => handleSelectChange('inspectorId', e.target.value)} 
-              options={allCheckers} 
-              placeholder={loadingCheckers ? "กำลังโหลดข้อมูล..." : "--เลือกผู้ตรวจสอบ--"} 
-              required
+            <SearchableSelectField
+              label="ผู้ตรวจสอบ"
+              value={contractForm.inspectorId}
+              onChange={(e) => handleSelectChange('inspectorId', e.target.value)}
+              options={allCheckers}
+              placeholder={loadingCheckers ? "กำลังโหลดข้อมูล..." : "--เลือกผู้ตรวจสอบ--"}
             />
             {/* สร้าง collector options ที่รวมสายที่บันทึกไว้ด้วย */}
             {(() => {
               // หาสายที่บันทึกไว้ในสัญญา (แม้จะไม่อยู่ในรายการปัจจุบัน)
-              const selectedCollector = allCollectors.find(emp => 
+              const selectedCollector = allCollectors.find(emp =>
                 String(emp.id) === String(contractForm.collectorId) ||
                 emp.code === contractForm.line ||
                 emp.name === contractForm.line ||
                 emp.full_name === contractForm.line
               );
-              
+
               // สร้าง collector จำลองสำหรับสายที่บันทึกไว้แต่ไม่อยู่ในรายการปัจจุบัน
               let virtualCollector = null;
               if (contractForm.line && !selectedCollector) {
@@ -1151,7 +1193,7 @@ const ContractEditForm = ({
                   isVirtual: true
                 };
               }
-              
+
               console.log('🔍 Collector selection debug:');
               console.log('  - contractForm.collectorId:', contractForm.collectorId);
               console.log('  - contractForm.line:', contractForm.line);
@@ -1159,7 +1201,7 @@ const ContractEditForm = ({
               console.log('  - virtualCollector:', virtualCollector);
               console.log('  - allCollectors count:', allCollectors.length);
               console.log('  - allCollectors sample:', allCollectors.slice(0, 3).map(emp => ({ id: emp.id, name: emp.name, position: emp.position, code: emp.code })));
-              
+
               // รวม options โดยให้สายที่บันทึกไว้อยู่ข้างหน้า
               let collectorOptions = allCollectors;
               if (selectedCollector && !allCollectors.some(emp => String(emp.id) === String(selectedCollector.id))) {
@@ -1167,34 +1209,35 @@ const ContractEditForm = ({
               } else if (virtualCollector) {
                 collectorOptions = [virtualCollector, ...allCollectors];
               }
-              
+
               console.log('🔍 Collector options:', collectorOptions.map(emp => ({ id: emp.id, name: emp.name, position: emp.position, code: emp.code, isVirtual: emp.isVirtual })));
               console.log('🔍 Final collectorOptions count:', collectorOptions.length);
               console.log('🔍 Final collectorOptions with selectedCollector:', selectedCollector ? 'YES' : 'NO');
               console.log('🔍 Final collectorOptions with virtualCollector:', virtualCollector ? 'YES' : 'NO');
-              
+
               return (
-                <SearchableSelectField 
-                  label="สาย" 
-                  value={contractForm.collectorId || (virtualCollector ? virtualCollector.id : '')} 
+                <SearchableSelectField
+                  label="สาย"
+                  value={contractForm.collectorId || (virtualCollector ? virtualCollector.id : '')}
                   onChange={(e) => {
                     const selectedId = e.target.value;
-                    if (selectedId.startsWith('line_')) {
+                    // แปลงเป็น string และตรวจสอบว่าเป็น string ก่อนใช้ startsWith
+                    const selectedIdStr = String(selectedId || '');
+                    if (selectedIdStr.startsWith('line_')) {
                       // ถ้าเลือกสายจำลอง ให้ใช้ line แทน collectorId
-                      handleSelectChange('line', selectedId.replace('line_', ''));
+                      handleSelectChange('line', selectedIdStr.replace('line_', ''));
                       handleSelectChange('collectorId', '');
                     } else {
                       // ถ้าเลือกพนักงานจริง
-                      const selectedEmp = allCollectors.find(emp => String(emp.id) === String(selectedId));
+                      const selectedEmp = allCollectors.find(emp => String(emp.id) === selectedIdStr);
                       if (selectedEmp) {
                         handleSelectChange('collectorId', selectedEmp.id);
                         handleSelectChange('line', selectedEmp.code || selectedEmp.name || '');
                       }
                     }
-                  }} 
-                  options={collectorOptions} 
-                  placeholder={loadingCollectors ? "กำลังโหลดข้อมูล..." : "--เลือกสาย--"} 
-                  required
+                  }}
+                  options={collectorOptions}
+                  placeholder={loadingCollectors ? "กำลังโหลดข้อมูล..." : "--เลือกสาย--"}
                 />
               );
             })()}
@@ -1202,7 +1245,7 @@ const ContractEditForm = ({
         </FormSection>
 
         <div className="flex justify-end gap-3 pt-4">
-          <Button 
+          <Button
             type="button"
             variant="outline"
             onClick={onBack}
@@ -1210,8 +1253,8 @@ const ContractEditForm = ({
           >
             ยกเลิก
           </Button>
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={submitting}
             className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed"
           >

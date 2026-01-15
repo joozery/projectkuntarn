@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Toaster } from '@/components/ui/toaster';
 import AdminLayout from '@/components/layout/AdminLayout';
@@ -41,7 +42,7 @@ function App() {
   const checkAuthStatus = async () => {
     try {
       setLoading(true);
-      
+
       if (authService.isAuthenticated()) {
         const user = authService.getCurrentUser();
         setCurrentUser(user);
@@ -67,16 +68,16 @@ function App() {
   const loadBranches = async () => {
     try {
       setLoading(true);
-      
+
       const response = await branchesService.getAll();
       const branchesData = response.data || [];
       setBranches(branchesData);
-      
+
       // Set first branch as selected if no branch is selected
       if (!selectedBranch && branchesData.length > 0) {
         setSelectedBranch(branchesData[0].id);
       }
-      
+
       console.log('✅ Branches loaded successfully:', branchesData);
     } catch (error) {
       console.error('❌ Error loading branches:', error);
@@ -91,8 +92,10 @@ function App() {
   };
 
   const handleLoginSuccess = (user) => {
+    console.log('🔑 Login success, user:', user);
     setCurrentUser(user);
     setIsAuthenticated(true);
+    console.log('✅ State updated - isAuthenticated:', true, 'currentUser:', user);
   };
 
   const handleLogout = () => {
@@ -103,11 +106,14 @@ function App() {
     setSelectedBranch(null);
   };
 
-  // Show 404 page first (except for admin users)
-  if (!currentUser || currentUser.role !== 'admin') {
+  // Show login page if not authenticated or not admin
+  console.log('🔍 Auth check - isAuthenticated:', isAuthenticated, 'currentUser:', currentUser, 'role:', currentUser?.role);
+
+  if (!isAuthenticated || !currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'super_admin')) {
+    console.log('🚫 Showing login page');
     return (
       <>
-        <NotFound404 />
+        <LoginPage onLoginSuccess={handleLoginSuccess} />
         <Toaster />
       </>
     );
@@ -124,28 +130,238 @@ function App() {
     );
   }
 
-  // Show login page if not authenticated
-  if (!isAuthenticated) {
-    return (
-      <>
-        <LoginPage onLoginSuccess={handleLoginSuccess} />
-        <Toaster />
-      </>
-    );
-  }
+
+  console.log('✅ Showing dashboard - isAuthenticated:', isAuthenticated, 'currentUser:', currentUser);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <AdminLayout 
-        branches={branches}
-        setBranches={setBranches}
-        selectedBranch={selectedBranch}
-        setSelectedBranch={setSelectedBranch}
-        currentUser={currentUser}
-        onLogout={handleLogout}
-      />
-      <Toaster />
-    </div>
+    <Router>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+        <Routes>
+          <Route path="/" element={
+            <AdminLayout
+              branches={branches}
+              setBranches={setBranches}
+              selectedBranch={selectedBranch}
+              setSelectedBranch={setSelectedBranch}
+              currentUser={currentUser}
+              onLogout={handleLogout}
+            />
+          } />
+          <Route path="/dashboard" element={
+            <AdminLayout
+              branches={branches}
+              setBranches={setBranches}
+              selectedBranch={selectedBranch}
+              setSelectedBranch={setSelectedBranch}
+              currentUser={currentUser}
+              onLogout={handleLogout}
+            />
+          } />
+          <Route path="/branches" element={
+            <AdminLayout
+              branches={branches}
+              setBranches={setBranches}
+              selectedBranch={selectedBranch}
+              setSelectedBranch={setSelectedBranch}
+              currentUser={currentUser}
+              onLogout={handleLogout}
+            />
+          } />
+          <Route path="/products" element={
+            <AdminLayout
+              branches={branches}
+              setBranches={setBranches}
+              selectedBranch={selectedBranch}
+              setSelectedBranch={setSelectedBranch}
+              currentUser={currentUser}
+              onLogout={handleLogout}
+            />
+          } />
+          <Route path="/customers" element={
+            <AdminLayout
+              branches={branches}
+              setBranches={setBranches}
+              selectedBranch={selectedBranch}
+              setSelectedBranch={setSelectedBranch}
+              currentUser={currentUser}
+              onLogout={handleLogout}
+            />
+          } />
+          <Route path="/installments" element={
+            <AdminLayout
+              branches={branches}
+              setBranches={setBranches}
+              selectedBranch={selectedBranch}
+              setSelectedBranch={setSelectedBranch}
+              currentUser={currentUser}
+              onLogout={handleLogout}
+            />
+          } />
+          <Route path="/contracts" element={
+            <AdminLayout
+              branches={branches}
+              setBranches={setBranches}
+              selectedBranch={selectedBranch}
+              setSelectedBranch={setSelectedBranch}
+              currentUser={currentUser}
+              onLogout={handleLogout}
+            />
+          } />
+          <Route path="/checkers" element={
+            <AdminLayout
+              branches={branches}
+              setBranches={setBranches}
+              selectedBranch={selectedBranch}
+              setSelectedBranch={setSelectedBranch}
+              currentUser={currentUser}
+              onLogout={handleLogout}
+            />
+          } />
+          <Route path="/checkers/:checkerId/customers" element={
+            <AdminLayout
+              branches={branches}
+              setBranches={setBranches}
+              selectedBranch={selectedBranch}
+              setSelectedBranch={setSelectedBranch}
+              currentUser={currentUser}
+              onLogout={handleLogout}
+            />
+          } />
+          <Route path="/checkers/:checkerId/report" element={
+            <AdminLayout
+              branches={branches}
+              setBranches={setBranches}
+              selectedBranch={selectedBranch}
+              setSelectedBranch={setSelectedBranch}
+              currentUser={currentUser}
+              onLogout={handleLogout}
+            />
+          } />
+          <Route path="/collectors" element={
+            <AdminLayout
+              branches={branches}
+              setBranches={setBranches}
+              selectedBranch={selectedBranch}
+              setSelectedBranch={setSelectedBranch}
+              currentUser={currentUser}
+              onLogout={handleLogout}
+            />
+          } />
+          <Route path="/reports" element={
+            <AdminLayout
+              branches={branches}
+              setBranches={setBranches}
+              selectedBranch={selectedBranch}
+              setSelectedBranch={setSelectedBranch}
+              currentUser={currentUser}
+              onLogout={handleLogout}
+            />
+          } />
+          <Route path="/payments" element={
+            <AdminLayout
+              branches={branches}
+              setBranches={setBranches}
+              selectedBranch={selectedBranch}
+              setSelectedBranch={setSelectedBranch}
+              currentUser={currentUser}
+              onLogout={handleLogout}
+            />
+          } />
+          <Route path="/returns" element={
+            <AdminLayout
+              branches={branches}
+              setBranches={setBranches}
+              selectedBranch={selectedBranch}
+              setSelectedBranch={setSelectedBranch}
+              currentUser={currentUser}
+              onLogout={handleLogout}
+            />
+          } />
+          <Route path="/employees" element={
+            <AdminLayout
+              branches={branches}
+              setBranches={setBranches}
+              selectedBranch={selectedBranch}
+              setSelectedBranch={setSelectedBranch}
+              currentUser={currentUser}
+              onLogout={handleLogout}
+            />
+          } />
+          <Route path="/salespeople" element={
+            <AdminLayout
+              branches={branches}
+              setBranches={setBranches}
+              selectedBranch={selectedBranch}
+              setSelectedBranch={setSelectedBranch}
+              currentUser={currentUser}
+              onLogout={handleLogout}
+            />
+          } />
+          <Route path="/all-checker-customers" element={
+            <AdminLayout
+              branches={branches}
+              setBranches={setBranches}
+              selectedBranch={selectedBranch}
+              setSelectedBranch={setSelectedBranch}
+              currentUser={currentUser}
+              onLogout={handleLogout}
+            />
+          } />
+          <Route path="/sales-index" element={
+            <AdminLayout
+              branches={branches}
+              setBranches={setBranches}
+              selectedBranch={selectedBranch}
+              setSelectedBranch={setSelectedBranch}
+              currentUser={currentUser}
+              onLogout={handleLogout}
+            />
+          } />
+          <Route path="/import-data" element={
+            <AdminLayout
+              branches={branches}
+              setBranches={setBranches}
+              selectedBranch={selectedBranch}
+              setSelectedBranch={setSelectedBranch}
+              currentUser={currentUser}
+              onLogout={handleLogout}
+            />
+          } />
+          <Route path="/admin-users" element={
+            <AdminLayout
+              branches={branches}
+              setBranches={setBranches}
+              selectedBranch={selectedBranch}
+              setSelectedBranch={setSelectedBranch}
+              currentUser={currentUser}
+              onLogout={handleLogout}
+            />
+          } />
+          <Route path="/settings" element={
+            <AdminLayout
+              branches={branches}
+              setBranches={setBranches}
+              selectedBranch={selectedBranch}
+              setSelectedBranch={setSelectedBranch}
+              currentUser={currentUser}
+              onLogout={handleLogout}
+            />
+          } />
+          <Route path="/payment-schedule" element={
+            <AdminLayout
+              branches={branches}
+              setBranches={setBranches}
+              selectedBranch={selectedBranch}
+              setSelectedBranch={setSelectedBranch}
+              currentUser={currentUser}
+              onLogout={handleLogout}
+            />
+          } />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+        <Toaster />
+      </div>
+    </Router>
   );
 }
 

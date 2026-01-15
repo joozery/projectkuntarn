@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Users, 
-  Plus, 
-  Search, 
-  Edit, 
-  Trash2, 
-  Shield, 
+import {
+  Users,
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  Shield,
   ShieldCheck,
   Eye,
   EyeOff,
@@ -40,8 +40,9 @@ const AdminUsersPage = ({ selectedBranch, currentBranch }) => {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const response = await adminUsersService.getAll(selectedBranch);
-      
+      // Don't filter by branch for admin users - show all users including Super Admins
+      const response = await adminUsersService.getAll(null);
+
       // Handle new response format: {data: [...], total: 1}
       const usersData = response.data || [];
       setUsers(usersData);
@@ -387,17 +388,16 @@ const AdminUsersPage = ({ selectedBranch, currentBranch }) => {
                         </span>
                       </td>
                       <td className="py-4 px-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          user.is_active 
-                            ? 'bg-green-100 text-green-800' 
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${user.is_active
+                            ? 'bg-green-100 text-green-800'
                             : 'bg-red-100 text-red-800'
-                        }`}>
+                          }`}>
                           {user.is_active ? 'ใช้งานได้' : 'ปิดใช้งาน'}
                         </span>
                       </td>
                       <td className="py-4 px-4">
                         <span className="text-sm text-gray-500">
-                          {user.last_login 
+                          {user.last_login
                             ? new Date(user.last_login).toLocaleDateString('th-TH')
                             : 'ยังไม่เคยเข้าใช้งาน'
                           }

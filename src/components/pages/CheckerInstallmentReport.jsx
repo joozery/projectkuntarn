@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  ArrowLeft, 
-  FileText, 
-  Calendar, 
-  DollarSign, 
+import {
+  ArrowLeft,
+  FileText,
+  Calendar,
+  DollarSign,
   TrendingUp,
   Download,
   Filter,
@@ -20,7 +20,12 @@ import api from '@/lib/api';
 import { toast } from '@/components/ui/use-toast';
 import Swal from 'sweetalert2';
 
-const CheckerInstallmentReport = ({ onBack, checker }) => {
+import { useParams, useNavigate } from 'react-router-dom';
+
+const CheckerInstallmentReport = ({ onBack, checker: propChecker, isStandalone }) => {
+  const { checkerId } = useParams();
+  const navigate = useNavigate();
+  const [checker, setChecker] = useState(propChecker);
   const [sortField, setSortField] = useState('contract');
   const [sortDirection, setSortDirection] = useState('asc');
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,21 +39,48 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedContractFilter, setSelectedContractFilter] = useState('');
 
+  // Update checker State
+  useEffect(() => {
+    if (propChecker) {
+      setChecker(propChecker);
+    } else if (isStandalone && checkerId) {
+      const fetchChecker = async () => {
+        try {
+          const response = await api.get(`/checkers/${checkerId}`);
+          if (response.data.success || response.data.data) {
+            setChecker(response.data.data || response.data);
+          }
+        } catch (error) {
+          console.error("Failed to load checker details", error);
+        }
+      };
+      fetchChecker();
+    }
+  }, [propChecker, isStandalone, checkerId]);
+
+  const handleBack = () => {
+    if (isStandalone) {
+      navigate('/checkers');
+    } else {
+      onBack();
+    }
+  };
+
 
   // ฟังก์ชันคำนวณสถานะ P ตามเดือนปัจจุบัน
   const calculatePStatus = useCallback((dueDate) => {
     if (!dueDate || dueDate === '-') return { pBlack: 0, pBlue: 0 };
-    
+
     try {
       const date = new Date(dueDate);
       if (isNaN(date.getTime())) return { pBlack: 0, pBlue: 0 };
-      
+
       const currentDate = new Date();
       const currentMonth = currentDate.getMonth() + 1;
       const currentYear = currentDate.getFullYear();
       const dueMonth = date.getMonth() + 1;
       const dueYear = date.getFullYear();
-      
+
       console.log('CalculatePStatus Debug:', {
         dueDate,
         dueMonth,
@@ -58,7 +90,7 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
         today: currentDate.getDate(),
         dueDay: date.getDate()
       });
-      
+
       // ตรวจสอบว่าเป็นเดือนที่ต้องเก็บเงินหรือไม่
       if (dueMonth === currentMonth && dueYear === currentYear) {
         // เป็นเดือนปัจจุบัน - แสดง P ดำ = "P", P น้ำเงิน = "1"
@@ -79,66 +111,162 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
     }
   }, []);
 
+  // Helper function เพื่อดึงวันที่นัดเก็บ (เฉพาะวันที่)
+  const getCollectionDay = (dateValue) => {
+    if (!dateValue) return null;
+
+    // ถ้าเป็นตัวเลข หรือ string ที่เป็นตัวเลขล้วน (เช่น "5", "25")
+    if (!isNaN(dateValue) && String(dateValue).length <= 2) {
+      return dateValue;
+    }
+
+    // ถ้าเป็น ISO Date String (เช่น "2025-01-09T17:00:00.000Z")
+    try {
+      const date = new Date(dateValue);
+      if (!isNaN(date.getTime())) {
+        // ใช้ getDate() เพื่อดึงวันที่ตามเวลาท้องถิ่น (หรือใช้ getUTCDate() ถ้าต้องการ UTC)
+        // ปกติวันนัดเก็บมักจะอิงตามวันที่่เราเห็น
+        return date.getDate();
+      }
+    } catch (e) {
+      console.error('Error parsing collection date:', e);
+    }
+
+    return null;
+  };
+
+  // Helper function เพื่อสร้างวันที่นัดเก็บประจำงวด (วัน/เดือน/ปี)
+  const formatCollectionDateForPeriod = (collectionDayValue, periodDate) => {
+    if (!collectionDayValue || !periodDate) return '-';
+
+    // ดึงเฉพาะวันที่
+    const day = getCollectionDay(collectionDayValue);
+    if (!day) return '-';
+
+    // สร้างวันที่ใหม่
+    const year = periodDate.getFullYear();
+    const month = periodDate.getMonth(); // 0-11
+
+    // สร้าง Date object (ระวังเรื่องวันที่เกินจำนวนวันในเดือนนั้นๆ เช่น 31 ก.พ.)
+    const specificDate = new Date(year, month, day);
+
+    // แปลงเป็น พ.ศ.
+    return specificDate.toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+    });
+  };
+
   // ฟังก์ชันดึงข้อมูลแยกตามเดือน
   const fetchMonthlyData = useCallback(async () => {
     try {
       const response = await api.get(`/installments`);
-      
+
       let installmentsData = [];
       if (response.data?.success) {
         installmentsData = response.data.data || [];
       } else if (Array.isArray(response.data)) {
         installmentsData = response.data;
       }
-      
+
       if (!Array.isArray(installmentsData)) {
         console.error('installmentsData is not an array:', installmentsData);
         return;
       }
 
-      const filteredData = installmentsData.filter(item => 
+      // Filter by inspector
+      const filteredData = installmentsData.filter(item =>
         item.inspectorId === checker?.id || item.inspectorId === parseInt(checker?.id)
       );
 
-      const uniqueData = filteredData.filter((item, index, self) => 
+      const uniqueData = filteredData.filter((item, index, self) =>
         index === self.findIndex(t => t.id === item.id)
       );
 
       const monthly = {};
-      
+
       // ดึงข้อมูลสัญญาจริงและแสดงตามเดือน
       for (const item of uniqueData) {
         try {
           const paymentsResponse = await api.get(`/installments/${item.id}/payments`);
           if (paymentsResponse.data?.success && paymentsResponse.data.data) {
             const payments = paymentsResponse.data.data;
-            
+
             // คำนวณยอดคงเหลือตามจริง
             const totalContractAmount = payments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
             const totalPaidAmount = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
             const actualRemainingDebt = totalContractAmount - totalPaidAmount;
-            
-            // หางวดที่ครบกำหนดชำระในเดือนที่เลือก
-            const currentDate = new Date();
-            const currentMonth = currentDate.getMonth() + 1;
-            const currentYear = currentDate.getFullYear();
-            
-            // หางวดที่ครบกำหนดชำระในเดือนปัจจุบัน
+            // หางวดที่ครบกำหนดชำระในเดือนที่เลือก (หรือเดือนปัจจุบันถ้าไม่ได้เลือก)
+            const targetMonth = selectedMonth ? parseInt(selectedMonth) : null;
+            const targetYear = selectedYear ? parseInt(selectedYear) : null;
+
+            // Debug การกรอง
+            // console.log(`Filtering for Month: ${targetMonth}, Year: ${targetYear}`);
+
+            // Helper: แปลงวันที่เป็นเวลาไทยก่อนหาปี/เดือน
+            const getThaiDateParts = (dateInput) => {
+              if (!dateInput) return { year: 0, month: 0 };
+
+              // แปลงเป็น Date Object
+              const date = new Date(dateInput);
+
+              // แปลงเป็น time string ในโซนไทย
+              const thaiDateStr = date.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' });
+              const thaiDate = new Date(thaiDateStr);
+
+              return {
+                year: thaiDate.getFullYear(),
+                month: thaiDate.getMonth() + 1
+              };
+            };
+
+            // หางวดที่ครบกำหนดชำระตามเงื่อนไข
             const currentMonthPayments = payments.filter(payment => {
-              const dueDate = new Date(payment.dueDate);
-              return dueDate.getMonth() + 1 === currentMonth && dueDate.getFullYear() === currentYear;
+              if (!payment.dueDate) return false;
+
+              const { year: dueYear, month: dueMonth } = getThaiDateParts(payment.dueDate);
+
+              // Debug เฉพาะรายการที่มีปัญหา (เช่นปี 2025)
+              if (targetYear === 2025 && dueYear === 2025) {
+                // console.log(`Found 2025 payment: ${payment.id}, Due: ${dueYear}-${dueMonth}`);
+              }
+
+              // กรองตามปี (ถ้าเลือก)
+              if (targetYear && dueYear !== targetYear) return false;
+
+              // กรองตามเดือน (ถ้าเลือก)
+              if (targetMonth && dueMonth !== targetMonth) return false;
+
+              // ถ้าไม่ได้เลือกปีและเดือน (เลือก "ทั้งหมด") -> แสดงทั้งหมด
+              if (!targetYear && !targetMonth) return true;
+
+              return true;
             });
-            
+
+            if (targetYear === 2025 && currentMonthPayments.length > 0) {
+              // console.log(`Contract ${item.contractNumber} has ${currentMonthPayments.length} payments in 2025`);
+            }
+
             // ตรวจสอบว่าเป็นสัญญาใหม่หรือไม่ (ยังไม่มีการชำระเงินเลย)
             const isNewContract = payments.every(p => p.status !== 'paid');
             const hasUpcomingPayments = payments.some(payment => {
-              const dueDate = new Date(payment.dueDate);
-              return dueDate.getMonth() + 1 >= currentMonth && dueDate.getFullYear() >= currentYear;
+              if (payment.status === 'paid') return false;
+
+              const { year: dueYear, month: dueMonth } = getThaiDateParts(payment.dueDate);
+
+              // ตรวจสอบเงื่อนไขอนาคตตาม Filter
+              if (targetYear) {
+                if (dueYear < targetYear) return false;
+                if (dueYear === targetYear && targetMonth && dueMonth < targetMonth) return false;
+              }
+
+              return true;
             });
-            
+
             // แสดงสัญญาใหม่ที่ยังไม่ถึงกำหนดชำระงวดแรก หรือ งวดที่ครบกำหนดในเดือนปัจจุบัน
             if (currentMonthPayments.length > 0 || (isNewContract && hasUpcomingPayments)) {
-              
+
               // กรณีสัญญาใหม่ที่ยังไม่ถึงกำหนดชำระงวดแรก
               if (isNewContract && hasUpcomingPayments && currentMonthPayments.length === 0) {
                 // หางวดแรกที่จะครบกำหนด
@@ -148,18 +276,18 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
                     return dueDate.getMonth() + 1 >= currentMonth && dueDate.getFullYear() >= currentYear;
                   })
                   .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0];
-                
+
                 if (nextPayment) {
                   const dueDate = nextPayment.dueDate;
                   const date = new Date(dueDate);
-                  
+
                   // ใช้เดือนปัจจุบันสำหรับสัญญาใหม่
                   const monthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
-                  const monthName = new Date(currentYear, currentMonth - 1).toLocaleDateString('th-TH', { 
-                    year: 'numeric', 
-                    month: 'long' 
+                  const monthName = new Date(currentYear, currentMonth - 1).toLocaleDateString('th-TH', {
+                    year: 'numeric',
+                    month: 'long'
                   });
-                  
+
                   if (!monthly[monthKey]) {
                     monthly[monthKey] = {
                       monthName,
@@ -170,15 +298,15 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
                       totalRemaining: 0
                     };
                   }
-                  
+
                   const amount = parseFloat(nextPayment.amount) || 0;
                   const amountCollected = 0; // สัญญาใหม่ยังไม่ได้ชำระ
                   const napheoBlue = 0; // ยังไม่ได้ชำระ
                   const collectionDateStr = date.toLocaleDateString('th-TH');
-                  
+
                   // สำหรับสัญญาใหม่ ไม่แสดง P เพราะยังไม่ถึงกำหนด
                   const pStatus = { pBlack: 0, pBlue: 0 };
-                  
+
                   console.log('New Contract Debug:', {
                     contract: item.contractNumber,
                     isNewContract: true,
@@ -187,12 +315,12 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
                     currentYear: currentYear,
                     pStatus: pStatus
                   });
-                  
+
                   monthly[monthKey].installments.push({
                     id: `${item.id}-${nextPayment.id}`,
                     contract: item.contractNumber || `C${item.id}`,
                     name: item.customerFullName || `${item.customerName || ''} ${item.customerSurname || ''}`.trim(),
-                    collectionDate: collectionDateStr,
+                    collectionDate: item.collectionDate ? formatCollectionDateForPeriod(item.collectionDate, date) : collectionDateStr,
                     amountToCollect: amount,
                     amountCollected: amountCollected,
                     remainingDebt: actualRemainingDebt,
@@ -204,24 +332,29 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
                     paymentStatus: nextPayment.status,
                     isNewContract: true // เพิ่ม flag เพื่อระบุว่าเป็นสัญญาใหม่
                   });
-                  
+
                   monthly[monthKey].totalAmount += amount;
                   monthly[monthKey].totalCollected += amountCollected;
                   monthly[monthKey].totalRemaining += actualRemainingDebt;
                 }
               }
-              
+
               // กรณีงวดที่ครบกำหนดชำระในเดือนปัจจุบัน
               for (const payment of currentMonthPayments) {
                 const dueDate = payment.dueDate;
-                const date = new Date(dueDate);
-                
-                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-                const monthName = date.toLocaleDateString('th-TH', { 
-                  year: 'numeric', 
-                  month: 'long' 
+                // const date = new Date(dueDate); // Old logic
+
+                // Use Thai Date Logic
+                const { year, month } = getThaiDateParts(dueDate);
+                const date = new Date(dueDate); // Keep date object for collection day calc
+
+                const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+
+                const monthName = new Date(year, month - 1).toLocaleDateString('th-TH', {
+                  year: 'numeric',
+                  month: 'long'
                 });
-                
+
                 if (!monthly[monthKey]) {
                   monthly[monthKey] = {
                     monthName,
@@ -232,13 +365,13 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
                     totalRemaining: 0
                   };
                 }
-                
+
                 const amount = parseFloat(payment.amount) || 0;
                 const amountCollected = payment.status === 'paid' ? amount : 0;
                 const napheoBlue = payment.status === 'paid' ? 1 : 0;
                 const collectionDateStr = date.toLocaleDateString('th-TH');
                 const pStatus = calculatePStatus(dueDate);
-                
+
                 // Debug: Log P status calculation
                 console.log('P Status Debug:', {
                   contract: item.contractNumber,
@@ -251,12 +384,12 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
                   currentMonth: currentMonth,
                   currentYear: currentYear
                 });
-                
+
                 monthly[monthKey].installments.push({
                   id: `${item.id}-${payment.id}`,
                   contract: item.contractNumber || `C${item.id}`,
                   name: item.customerFullName || `${item.customerName || ''} ${item.customerSurname || ''}`.trim(),
-                  collectionDate: collectionDateStr,
+                  collectionDate: item.collectionDate ? formatCollectionDateForPeriod(item.collectionDate, date) : collectionDateStr,
                   amountToCollect: amount,
                   amountCollected: amountCollected,
                   remainingDebt: actualRemainingDebt, // ยอดคงเหลือตามจริง
@@ -267,7 +400,7 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
                   pBlue: pStatus.pBlue, // "1" เมื่อถึงเดือนที่ต้องเก็บ
                   paymentStatus: payment.status
                 });
-                
+
                 monthly[monthKey].totalAmount += amount;
                 monthly[monthKey].totalCollected += amountCollected;
                 monthly[monthKey].totalRemaining += actualRemainingDebt;
@@ -286,16 +419,15 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
       });
 
       setMonthlyData(sortedMonthlyData);
-      
+
     } catch (error) {
       console.error('Error fetching monthly data:', error);
       toast({
         title: 'เกิดข้อผิดพลาด',
         description: 'ไม่สามารถดึงข้อมูลรายเดือนได้',
-        variant: 'destructive',
       });
     }
-  }, [checker?.id, calculatePStatus]);
+  }, [checker?.id, calculatePStatus, selectedMonth, selectedYear]);
 
   // ฟังก์ชันรีเฟรชข้อมูล
   const handleRefresh = useCallback(() => {
@@ -313,7 +445,7 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
       setSelectedContractFilter(selectedContract);
       // ลบข้อมูลออกจาก localStorage หลังจากใช้แล้ว
       localStorage.removeItem('selectedContractForChecker');
-      
+
       // แสดง Swal แจ้งว่ากำลังกรองข้อมูลตามสัญญา
       Swal.fire({
         icon: 'info',
@@ -335,35 +467,35 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
       try {
         setLoading(true);
         setError(null);
-        
+
         const response = await api.get(`/installments`);
-        
+
         let installmentsData = [];
         if (response.data?.success) {
           installmentsData = response.data.data || [];
         } else if (Array.isArray(response.data)) {
           installmentsData = response.data;
         }
-        
+
         if (!Array.isArray(installmentsData)) {
           throw new Error('ข้อมูลที่ได้รับไม่ใช่ Array');
         }
-        
+
         const filteredData = installmentsData.filter(item => {
           return item.inspectorId === checker?.id || item.inspectorId === parseInt(checker?.id);
         });
-        
-        const uniqueData = filteredData.filter((item, index, self) => 
+
+        const uniqueData = filteredData.filter((item, index, self) =>
           index === self.findIndex(t => t.id === item.id)
         );
-        
+
         // ดึงข้อมูลการชำระเงินสำหรับแต่ละ installment
         const processedData = [];
         for (let index = 0; index < uniqueData.length; index++) {
           const item = uniqueData[index];
           const collectionDate = item.dueDate || item.collectionDate;
           let formattedDate = '-';
-          
+
           if (collectionDate) {
             try {
               const date = new Date(collectionDate);
@@ -374,20 +506,20 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
               console.error('Error parsing date:', collectionDate, error);
             }
           }
-          
+
           const pStatus = calculatePStatus(collectionDate);
-          
+
           // ดึงข้อมูลการชำระเงินสำหรับ installment นี้
           let amountCollected = 0;
           let napheoBlue = 0;
           let paymentStatus = 'pending';
-          
+
           try {
             const paymentsResponse = await api.get(`/installments/${item.id}/payments`);
             if (paymentsResponse.data?.success && paymentsResponse.data.data) {
               const payments = paymentsResponse.data.data;
               amountCollected = payments.reduce((sum, payment) => sum + parseFloat(payment.amount || 0), 0);
-              
+
               // ถ้ามีการชำระเงินแล้ว ให้ napheoBlue = 1
               if (amountCollected > 0) {
                 napheoBlue = 1;
@@ -397,7 +529,7 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
           } catch (error) {
             console.error('Error fetching payments for installment:', item.id, error);
           }
-          
+
           processedData.push({
             id: item.id,
             sequence: index + 1,
@@ -415,9 +547,9 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
             paymentStatus: paymentStatus
           });
         }
-        
+
         setInstallments(processedData);
-        
+
         const totalPBlack = processedData.reduce((sum, item) => {
           // ถ้า pBlack เป็น "P" หรือ 1 ให้นับเป็น 1
           if (item.pBlack === "P" || item.pBlack === 1) return sum + 1;
@@ -428,27 +560,27 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
           if (item.pBlue === "1" || item.pBlue === 1) return sum + 1;
           return sum;
         }, 0);
-        
+
         // คำนวณยอดเงินคงเหลือตามจริงจากตาราง payments
         let totalRemainingAmount = 0;
         let totalAmountCollected = 0;
         let cardsCollected = 0;
         let napheoBlueCollected = 0;
-        
+
         for (const item of processedData) {
           try {
             const paymentsResponse = await api.get(`/installments/${item.id}/payments`);
             if (paymentsResponse.data?.success && paymentsResponse.data.data) {
               const payments = paymentsResponse.data.data;
-              
+
               // คำนวณยอดคงเหลือตามจริง
               const totalContractAmount = payments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
               const totalPaidAmount = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
               const actualRemainingDebt = totalContractAmount - totalPaidAmount;
-              
+
               totalRemainingAmount += actualRemainingDebt;
               totalAmountCollected += totalPaidAmount;
-              
+
               if (totalPaidAmount > 0) {
                 cardsCollected++;
                 napheoBlueCollected++;
@@ -458,7 +590,7 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
             console.error('Error calculating remaining amount for installment:', item.id, error);
           }
         }
-        
+
         const summaryData = {
           totalCards: processedData.length,
           cardsToCollect: processedData.length,
@@ -473,21 +605,21 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
           moneyToCollect: totalRemainingAmount, // ยอดเงินคงเหลือทั้งหมด (เท่ากับ totalMoney)
           moneyCollected: totalAmountCollected
         };
-        
+
         setSummary(summaryData);
-        
+
         await fetchMonthlyData();
-        
+
       } catch (error) {
         console.error('Error fetching installments:', error);
         setError(error.message || 'เกิดข้อผิดพลาดในการดึงข้อมูล');
-        
+
         toast({
           title: 'เกิดข้อผิดพลาด',
           description: error.response?.data?.message || error.message || 'ไม่สามารถดึงข้อมูลได้',
           variant: 'destructive',
         });
-        
+
         setInstallments([]);
         setSummary({
           totalCards: 0,
@@ -511,7 +643,7 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
     if (checker?.id) {
       fetchData();
     }
-  }, [checker?.id, selectedMonth, refreshKey, fetchMonthlyData, calculatePStatus]);
+  }, [checker?.id, selectedMonth, selectedYear, refreshKey, fetchMonthlyData, calculatePStatus]);
 
   // ฟังก์ชันเรียงลำดับ
   const handleSort = useCallback((field) => {
@@ -530,18 +662,18 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
 
   // ฟังก์ชันกรองข้อมูล
   const filteredData = useMemo(() => {
-    const uniqueInstallments = installments.filter((item, index, self) => 
+    const uniqueInstallments = installments.filter((item, index, self) =>
       index === self.findIndex(t => t.id === item.id)
     );
-    
+
     return uniqueInstallments.filter(item => {
       const matchesSearch = item.contract.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           item.name.toLowerCase().includes(searchTerm.toLowerCase());
-      
+        item.name.toLowerCase().includes(searchTerm.toLowerCase());
+
       // กรองตามสัญญาที่เลือก
-      const matchesContract = !selectedContractFilter || 
-                             item.contract.toLowerCase().includes(selectedContractFilter.toLowerCase());
-      
+      const matchesContract = !selectedContractFilter ||
+        item.contract.toLowerCase().includes(selectedContractFilter.toLowerCase());
+
       // กรองตามเดือนและปี
       let matchesDate = true;
       if ((selectedMonth && selectedMonth !== '') || (selectedYear && selectedYear !== '')) {
@@ -550,20 +682,20 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
           if (!isNaN(itemDate.getTime())) {
             const itemMonth = itemDate.getMonth() + 1;
             const itemYear = itemDate.getFullYear();
-            
+
             let matchesMonth = true;
             let matchesYear = true;
-            
+
             // กรองตามเดือน
             if (selectedMonth && selectedMonth !== '') {
               matchesMonth = itemMonth === parseInt(selectedMonth);
             }
-            
+
             // กรองตามปี
             if (selectedYear && selectedYear !== '') {
               matchesYear = itemYear === parseInt(selectedYear);
             }
-            
+
             matchesDate = matchesMonth && matchesYear;
           } else {
             // ถ้าไม่สามารถแปลงวันที่ได้ ให้แสดงข้อมูลนั้น (อาจเป็นข้อมูลเก่า)
@@ -575,7 +707,7 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
           matchesDate = true;
         }
       }
-      
+
       return matchesSearch && matchesDate && matchesContract;
     });
   }, [installments, searchTerm, selectedMonth, selectedYear, selectedContractFilter]);
@@ -591,10 +723,10 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
 
   // เรียงข้อมูล
   const sortedData = useMemo(() => {
-    const uniqueFilteredData = filteredData.filter((item, index, self) => 
+    const uniqueFilteredData = filteredData.filter((item, index, self) =>
       index === self.findIndex(t => t.id === item.id)
     );
-    
+
     return [...uniqueFilteredData].sort((a, b) => {
       let aValue = a[sortField];
       let bValue = b[sortField];
@@ -626,7 +758,7 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
         totalAmountCollected,
         totalRemainingDebt
       };
-      
+
       const dataStr = JSON.stringify(exportData, null, 2);
       const dataBlob = new Blob([dataStr], { type: 'application/json' });
       const url = URL.createObjectURL(dataBlob);
@@ -635,7 +767,7 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
       link.download = `checker-report-${checker?.id}-${new Date().toISOString().split('T')[0]}.json`;
       link.click();
       URL.revokeObjectURL(url);
-      
+
       toast({
         title: 'ส่งออกสำเร็จ',
         description: 'ไฟล์รายงานถูกดาวน์โหลดแล้ว',
@@ -657,7 +789,7 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
           <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 mb-2">ไม่พบข้อมูลเช็คเกอร์</h2>
           <p className="text-gray-600 mb-4">กรุณาเลือกเช็คเกอร์ก่อน</p>
-          <Button onClick={onBack} variant="outline">
+          <Button onClick={handleBack} variant="outline">
             <ArrowLeft className="w-4 h-4 mr-2" />
             กลับ
           </Button>
@@ -676,7 +808,7 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={onBack}
+                onClick={handleBack}
                 className="text-gray-600 hover:text-gray-900"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
@@ -690,8 +822,8 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={handleRefresh}
                 disabled={loading}
@@ -699,8 +831,8 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
                 <Loader2 className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 รีเฟรช
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={handleExport}
                 disabled={loading || sortedData.length === 0}
@@ -835,7 +967,7 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
                   </div>
                 </div>
               )}
-              
+
               <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 md:space-x-4">
                 {/* Search */}
                 <div className="flex-1 max-w-md">
@@ -880,19 +1012,12 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
                       className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="">ทุกปี</option>
-                      <option value="2024">2024</option>
-                      <option value="2023">2023</option>
-                      <option value="2022">2022</option>
-                      <option value="2021">2021</option>
-                      <option value="2020">2020</option>
-                      <option value="2019">2019</option>
-                      <option value="2018">2018</option>
-                      <option value="2017">2017</option>
-                      <option value="2016">2016</option>
-                      <option value="2015">2015</option>
+                      {Array.from({ length: 15 }, (_, i) => new Date().getFullYear() + 5 - i).map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
                     </select>
                   </div>
-                  
+
                   {/* Contract Filter */}
                   {selectedContractFilter && (
                     <div className="flex items-center space-x-2">
@@ -910,7 +1035,7 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
                       </Button>
                     </div>
                   )}
-                  
+
                   {/* Clear All Filters */}
                   {(selectedMonth || selectedYear || selectedContractFilter) && (
                     <Button
@@ -948,23 +1073,23 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
                   .filter(([monthKey, monthData]) => {
                     // ถ้าไม่ได้เลือกเดือนหรือปีใดๆ ให้แสดงทุกเดือน
                     if ((!selectedMonth || selectedMonth === '') && (!selectedYear || selectedYear === '')) return true;
-                    
+
                     // แยกปีและเดือนจาก monthKey (format: YYYY-MM)
                     const [yearFromKey, monthFromKey] = monthKey.split('-');
-                    
+
                     let matchesMonth = true;
                     let matchesYear = true;
-                    
+
                     // กรองตามเดือน
                     if (selectedMonth && selectedMonth !== '') {
                       matchesMonth = monthFromKey === selectedMonth.padStart(2, '0');
                     }
-                    
+
                     // กรองตามปี
                     if (selectedYear && selectedYear !== '') {
                       matchesYear = yearFromKey === selectedYear;
                     }
-                    
+
                     return matchesMonth && matchesYear;
                   })
                   .map(([monthKey, monthData]) => (
@@ -974,9 +1099,9 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
                           <div>
                             <h3 className="text-lg font-semibold text-gray-900">{monthData.monthName}</h3>
                             <p className="text-sm text-gray-600">
-                              {monthData.installments.length} สัญญา | 
-                              เงินต้องเก็บ: ฿{monthData.totalAmount.toLocaleString()} | 
-                              เงินเก็บได้: ฿{monthData.totalCollected.toLocaleString()} | 
+                              {monthData.installments.length} สัญญา |
+                              เงินต้องเก็บ: ฿{monthData.totalAmount.toLocaleString()} |
+                              เงินเก็บได้: ฿{monthData.totalCollected.toLocaleString()} |
                               ยอดเหลือผ่อน: ฿{monthData.totalRemaining.toLocaleString()}
                             </p>
                           </div>
@@ -987,7 +1112,7 @@ const CheckerInstallmentReport = ({ onBack, checker }) => {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200">
                           <thead className="bg-gray-50">

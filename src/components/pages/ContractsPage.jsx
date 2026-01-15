@@ -72,6 +72,13 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
       const customersData = customersRes.data?.success ? customersRes.data.data : (customersRes.data || []);
       const inventoryData = inventoryRes.data?.success ? inventoryRes.data.data : (inventoryRes.data || []);
       const employeesData = employeesRes.data?.success ? employeesRes.data.data : (employeesRes.data || []);
+      
+      console.log('🔍 Raw API responses:', {
+        contracts: contractsRes.data,
+        customers: customersRes.data,
+        inventory: inventoryRes.data,
+        employees: employeesRes.data
+      });
 
       // ลบข้อมูลสัญญาซ้ำกัน
       const originalLength = contractsData.length;
@@ -85,17 +92,21 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
         console.log('🔍 Unique contracts:', contractsData.length);
       }
 
-      console.log('Processed data:', { 
+      console.log('🔍 Processed data:', { 
         contracts: contractsData.length, 
         customers: customersData.length, 
         inventory: inventoryData.length, 
         employees: employeesData.length 
       });
+      
+      console.log('🔍 First contract sample:', contractsData[0]);
 
       setContracts(contractsData);
       setCustomers(customersData);
       setInventory(inventoryData);
       setEmployees(employeesData);
+      
+      console.log('✅ State updated - contracts:', contractsData.length, 'customers:', customersData.length);
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -405,6 +416,8 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
     index === self.findIndex(c => c.id === contract.id)
   );
 
+  console.log('🔍 Filtering contracts - total:', contracts.length, 'unique:', uniqueContracts.length);
+
   const filteredContracts = uniqueContracts.filter(contract => {
     const matchesSearch = contract.contractNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          contract.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -413,6 +426,8 @@ const ContractsPage = ({ selectedBranch, currentBranch }) => {
     const matchesStatus = statusFilter === 'all' || contract.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+  
+  console.log('🔍 Filtered contracts:', filteredContracts.length);
 
   // เรียงลำดับข้อมูลตามที่เลือก
   const sortedContracts = sortContracts(filteredContracts);

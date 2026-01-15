@@ -39,40 +39,41 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
       try {
         // Load contracts first
         const contractsData = await loadContracts();
-        
+
         // Load contract details first (for mapping)
         await loadContractDetails();
-        
+
         // Then load products with contract data
         const response = await inventoryService.getAll({
           branchId: selectedBranch,
           page: currentPage,
-          limit: itemsPerPage
+          limit: itemsPerPage,
+          getAll: true  // แสดงสินค้าทั้งหมด รวม Active + Sold
         });
-        
+
         if (response.data.success) {
           // total items/pages from backend
-          const total = response.data.total 
-            || response.data.pagination?.totalItems 
-            || response.data.count 
+          const total = response.data.total
+            || response.data.pagination?.totalItems
+            || response.data.count
             || 0;
           if (total) setTotalItems(total);
           const apiPages = response.data.pagination?.totalPages || 0;
           if (apiPages) setTotalPagesFromApi(apiPages);
-          
+
           // Get product names from installments table
           const productsWithNames = response.data.data.map(product => {
             // Find matching contract to get product name
-            const matchingContract = contractsData.find(contract => 
+            const matchingContract = contractsData.find(contract =>
               contract.product_id === product.id
             );
-            
+
             return {
               ...product,
               display_name: matchingContract?.product_name || product.product_name
             };
           });
-          
+
           // เรียงลำดับตามวันที่รับ (เก่าไปใหม่) และชื่อสินค้า
           const sortedProducts = productsWithNames.sort((a, b) => {
             // เรียงลำดับตามวันที่รับ (เก่าไปใหม่)
@@ -85,17 +86,17 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
             }
             return 0;
           });
-          
+
           // ตั้งค่า products เฉพาะสินค้าคงเหลือก่อน (จะถูกอัปเดตใน calculateInventoryStats)
           setProducts(sortedProducts);
-    } else {
+        } else {
           console.error('Error loading products:', response.data.message);
         }
-        
+
         // Calculate inventory statistics (after contract details are loaded)
         console.log('🔍 Before calculateInventoryStats - contractDetails:', contractDetails);
         await calculateInventoryStats();
-        
+
         setLoading(false);
       } catch (error) {
         console.error('Error loading data:', error);
@@ -108,7 +109,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
 
   const loadContracts = async () => {
     try {
-    if (selectedBranch) {
+      if (selectedBranch) {
         const response = await contractsService.getAll(selectedBranch);
         const contractsData = response.data?.success ? response.data.data : (response.data || []);
         setContracts(contractsData);
@@ -126,13 +127,13 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
   const loadContractDetails = async () => {
     try {
       if (!selectedBranch) return;
-      
+
       const response = await contractsService.getAll(selectedBranch);
       const contractsData = response.data?.success ? response.data.data : (response.data || []);
-      
+
       console.log('🔍 loadContractDetails - raw response:', response.data);
       console.log('🔍 loadContractDetails - contractsData:', contractsData);
-      
+
       // สร้าง mapping ระหว่าง product_id และ contract details
       const contractMap = {};
       contractsData.forEach(contract => {
@@ -149,14 +150,14 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
           };
         }
       });
-      
+
       console.log('🔍 All contracts with productId/product_id:', contractsData.map(c => ({
         contractNumber: c.contractNumber,
         productId: c.productId,
         product_id: c.product_id,
         productName: c.productName
       })));
-      
+
       setContractDetails(contractMap);
       console.log('🔍 Contract details loaded:', contractMap);
       console.log('🔍 Contracts with productId:', contractsData.filter(c => c.productId).length);
@@ -170,18 +171,19 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
   const calculateInventoryStats = async () => {
     try {
       if (!selectedBranch) return;
-      
+
       // Load all inventory items for statistics
       const response = await inventoryService.getAll({
         branchId: selectedBranch,
-        limit: 1000 // Get all items for accurate stats
+        limit: 1000, // Get all items for accurate stats
+        getAll: true  // แสดงสินค้าทั้งหมด รวม Active + Sold
       });
-      
+
       if (response.data?.success && response.data.data) {
         const allItems = response.data.data;
-        
+
         console.log('🔍 calculateInventoryStats - allItems from API:', allItems.length);
-        
+
         // Calculate statistics
         const stats = {
           totalItems: allItems.length,
@@ -194,12 +196,12 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
           }, 0),
           categories: {}
         };
-        
+
         // Categorize items
         allItems.forEach(item => {
           const name = item.product_name || 'ไม่ระบุ';
           let category = 'อื่นๆ';
-          
+
           if (name.includes('เครื่องซักผ้า')) category = 'เครื่องซักผ้า';
           else if (name.includes('ตู้เย็น') || name.includes('ตู้แช่')) category = 'ตู้เย็น/ตู้แช่';
           else if (name.includes('เตียง')) category = 'เตียงนอน';
@@ -210,30 +212,30 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
           else if (name.includes('พัดลม')) category = 'พัดลม';
           else if (name.includes('เตาแก๊ส')) category = 'เตาแก๊ส';
           else if (name.includes('เครื่องเสียง')) category = 'เครื่องเสียง';
-          
+
           if (!stats.categories[category]) {
             stats.categories[category] = {
               count: 0,
               value: 0
             };
           }
-          
+
           const price = parseFloat(item.cost_price) || 0;
           const qty = Number(item.remaining_quantity1) || 0;
-          
+
           stats.categories[category].count += qty;
           stats.categories[category].value += (price * qty);
         });
-        
+
         // เพิ่มข้อมูลสัญญา - ใช้ contractDetails state แทน contractMap
         console.log('🔍 calculateInventoryStats - contractDetails:', contractDetails);
         console.log('🔍 calculateInventoryStats - allItems length:', allItems.length);
         stats.contractsCount = Object.keys(contractDetails).length;
         stats.itemsWithContracts = allItems.filter(item => contractDetails[item.id]).length;
-        
+
         console.log('🔍 Creating soldItems - contractDetails keys:', Object.keys(contractDetails));
         console.log('🔍 Creating soldItems - allItems IDs:', allItems.map(item => item.id));
-        
+
         // เพิ่มสินค้าที่ทำสัญญาไปแล้วเข้าไปในรายการสินค้า
         const soldItems = Object.entries(contractDetails)
           .map(([productId, contract]) => ({
@@ -253,17 +255,22 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
             sequence: `S${productId}`,
             isSoldItem: true // เพิ่ม flag เพื่อระบุว่าเป็นสินค้าที่ขายไปแล้ว
           }));
-        
+
         console.log('🔍 Created soldItems:', soldItems);
-        
+
         // คำนวณสถิติที่ถูกต้อง
         stats.soldItemsCount = soldItems.length;
         stats.totalContractedItems = stats.itemsWithContracts + stats.soldItemsCount;
-        
-        // รวมสินค้าคงเหลือและสินค้าที่ขายไปแล้ว
-        const allProductsWithSold = [...allItems, ...soldItems];
+
+        // กรองเอาเฉพาะ soldItems ที่ไม่มีอยู่ใน allItems (เพื่อไม่ให้ซ้ำ)
+        const uniqueSoldItems = soldItems.filter(sold =>
+          !allItems.some(item => item.id === sold.id)
+        );
+
+        // รวมสินค้าคงเหลือและสินค้าที่ขายไปแล้ว (ที่ไม่ซ้ำ)
+        const allProductsWithSold = [...allItems, ...uniqueSoldItems];
         stats.totalItemsWithSold = allProductsWithSold.length;
-        
+
         // เรียงลำดับตามวันที่รับ (เก่าไปใหม่) และชื่อสินค้า
         const sortedAllProducts = allProductsWithSold.sort((a, b) => {
           // เรียงลำดับตามวันที่รับ (เก่าไปใหม่)
@@ -276,12 +283,12 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
           }
           return 0;
         });
-        
+
         // อัปเดต products state ให้รวมสินค้าที่ขายไปแล้ว
         console.log('🔍 Final products state - allItems:', allItems.length, 'soldItems:', soldItems.length);
         console.log('🔍 Final products state - total:', sortedAllProducts.length);
         setProducts(sortedAllProducts);
-        
+
         setInventoryStats(stats);
       }
     } catch (error) {
@@ -297,14 +304,15 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
     (product.contract_number && product.contract_number.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Pagination logic (prefer backend total when available)
-  const effectiveTotal = searchTerm ? filteredProducts.length : (totalItems || filteredProducts.length);
+  // Pagination logic - Now handling full dataset client-side
+  const effectiveTotal = filteredProducts.length;
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentProducts = filteredProducts; // server returns a page already
-  const totalPages = searchTerm 
-    ? Math.ceil(Math.max(effectiveTotal, 1) / itemsPerPage)
-    : (totalPagesFromApi || Math.ceil(Math.max(effectiveTotal, 1) / itemsPerPage));
+
+  // Slice the filtered products to show only current page
+  const currentProducts = filteredProducts.slice(indexOfFirstItem, indexOfLastItem);
+
+  const totalPages = Math.ceil(Math.max(effectiveTotal, 1) / itemsPerPage);
 
   // Reset to first page when search term changes
   useEffect(() => {
@@ -352,7 +360,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
       if (result.isConfirmed) {
         // เก็บข้อมูลสัญญาใน localStorage เพื่อส่งไปยังหน้าของเช็คเกอร์
         localStorage.setItem('selectedContractForChecker', contractNumber);
-        
+
         // แสดง Swal แจ้งให้ไปหน้าของเช็คเกอร์
         Swal.fire({
           icon: 'info',
@@ -373,7 +381,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
   const addProduct = async (productData) => {
     try {
       setSubmitting(true);
-      
+
       const inventoryData = {
         product_name: productData.productName,
         product_code: productData.productCode,
@@ -387,17 +395,18 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
         remaining_quantity1: 1,
         sold_quantity1: 0
       };
-      
+
       const response = await inventoryService.create(inventoryData);
-      
+
       if (response.data.success) {
         // Reload products to get the updated list
         const reloadResponse = await inventoryService.getAll({
           branchId: selectedBranch,
           page: currentPage,
-          limit: itemsPerPage
+          limit: itemsPerPage,
+          getAll: true
         });
-        
+
         if (reloadResponse.data.success) {
           const total = reloadResponse.data.total || reloadResponse.data.pagination?.totalItems || reloadResponse.data.count || 0;
           if (total) setTotalItems(total);
@@ -406,16 +415,16 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
           // Get product names from installments table
           const productsWithNames = reloadResponse.data.data.map(product => {
             // Find matching contract to get product name
-            const matchingContract = contracts.find(contract => 
+            const matchingContract = contracts.find(contract =>
               contract.product_id === product.id
             );
-            
+
             return {
               ...product,
               display_name: matchingContract?.product_name || product.product_name
             };
           });
-          
+
           // เรียงลำดับตามวันที่รับ (เก่าไปใหม่) และชื่อสินค้า
           const sortedProducts = productsWithNames.sort((a, b) => {
             // เรียงลำดับตามวันที่รับ (เก่าไปใหม่)
@@ -428,16 +437,16 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
             }
             return 0;
           });
-          
+
           setProducts(sortedProducts);
         }
-        
+
         // Recalculate statistics after adding product
         await calculateInventoryStats();
-        
+
         // Reload contract details
         await loadContractDetails();
-        
+
         Swal.fire({
           icon: 'success',
           title: 'สำเร็จ!',
@@ -478,15 +487,16 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
     if (result.isConfirmed) {
       try {
         const response = await inventoryService.delete(productId);
-        
+
         if (response.data.success) {
           // Reload products to get the updated list
           const reloadResponse = await inventoryService.getAll({
             branchId: selectedBranch,
             page: currentPage,
-            limit: itemsPerPage
+            limit: itemsPerPage,
+            getAll: true
           });
-          
+
           if (reloadResponse.data.success) {
             const total = reloadResponse.data.total || reloadResponse.data.pagination?.totalItems || reloadResponse.data.count || 0;
             if (total) setTotalItems(total);
@@ -495,16 +505,16 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
             // Get product names from installments table
             const productsWithNames = reloadResponse.data.data.map(product => {
               // Find matching contract to get product name
-              const matchingContract = contracts.find(contract => 
+              const matchingContract = contracts.find(contract =>
                 contract.product_id === product.id
               );
-              
+
               return {
                 ...product,
                 display_name: matchingContract?.product_name || product.product_name
               };
             });
-            
+
             // เรียงลำดับตามวันที่รับ (เก่าไปใหม่) และชื่อสินค้า
             const sortedProducts = productsWithNames.sort((a, b) => {
               // เรียงลำดับตามวันที่รับ (เก่าไปใหม่)
@@ -517,23 +527,23 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
               }
               return 0;
             });
-            
+
             setProducts(sortedProducts);
-        }
-        
-        // Recalculate statistics after deleting product
-        await calculateInventoryStats();
-        
-        // Reload contract details
-        await loadContractDetails();
-        
-        Swal.fire({
-          icon: 'success',
-          title: 'สำเร็จ!',
-          text: 'ลบสินค้าเรียบร้อยแล้ว',
-          confirmButtonText: 'ตกลง',
-          confirmButtonColor: '#10b981'
-        });
+          }
+
+          // Recalculate statistics after deleting product
+          await calculateInventoryStats();
+
+          // Reload contract details
+          await loadContractDetails();
+
+          Swal.fire({
+            icon: 'success',
+            title: 'สำเร็จ!',
+            text: 'ลบสินค้าเรียบร้อยแล้ว',
+            confirmButtonText: 'ตกลง',
+            confirmButtonColor: '#10b981'
+          });
         } else {
           throw new Error(response.data.message || 'Failed to delete product');
         }
@@ -557,27 +567,30 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
   const updateProduct = async (updatedData) => {
     try {
       setSubmitting(true);
-      
+
       const inventoryData = {
         product_name: updatedData.productName || editingProduct.product_name,
         product_code: updatedData.productCode || editingProduct.product_code,
         shop_name: updatedData.shopName || editingProduct.shop_name,
         contract_number: updatedData.contract || editingProduct.contract_number,
-        cost_price: parseFloat(updatedData.costPrice?.replace(/,/g, '')) || editingProduct.cost_price,
+        cost_price: updatedData.costPrice !== undefined && updatedData.costPrice !== ''
+          ? parseFloat(updatedData.costPrice.replace(/,/g, ''))
+          : editingProduct.cost_price,
         receive_date: updatedData.receiveDate || editingProduct.receive_date,
         remarks: updatedData.remarks || editingProduct.remarks
       };
-      
+
       const response = await inventoryService.update(editingProduct.id, inventoryData);
-      
+
       if (response.data.success) {
         // Reload products to get the updated list
         const reloadResponse = await inventoryService.getAll({
           branchId: selectedBranch,
           page: currentPage,
-          limit: itemsPerPage
+          limit: itemsPerPage,
+          getAll: true
         });
-        
+
         if (reloadResponse.data.success) {
           const total = reloadResponse.data.total || reloadResponse.data.pagination?.totalItems || reloadResponse.data.count || 0;
           if (total) setTotalItems(total);
@@ -586,16 +599,16 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
           // Get product names from installments table
           const productsWithNames = reloadResponse.data.data.map(product => {
             // Find matching contract to get product name
-            const matchingContract = contracts.find(contract => 
+            const matchingContract = contracts.find(contract =>
               contract.product_id === product.id
             );
-            
+
             return {
               ...product,
               display_name: matchingContract?.product_name || product.product_name
             };
           });
-          
+
           // เรียงลำดับตามวันที่รับ (เก่าไปใหม่) และชื่อสินค้า
           const sortedProducts = productsWithNames.sort((a, b) => {
             // เรียงลำดับตามวันที่รับ (เก่าไปใหม่)
@@ -608,18 +621,18 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
             }
             return 0;
           });
-          
+
           setProducts(sortedProducts);
         }
-        
+
         // Recalculate statistics after updating product
         await calculateInventoryStats();
-        
+
         // Reload contract details
         await loadContractDetails();
-        
+
         setEditingProduct(null);
-        
+
         Swal.fire({
           icon: 'success',
           title: 'สำเร็จ!',
@@ -670,9 +683,9 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
             <p className="text-gray-600">กำลังโหลดข้อมูล...</p>
           </div>
         </div>
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-                <span className="ml-2 text-gray-500">กำลังโหลดข้อมูลสินค้า...</span>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+          <span className="ml-2 text-gray-500">กำลังโหลดข้อมูลสินค้า...</span>
         </div>
       </div>
     );
@@ -784,7 +797,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">สรุปตามหมวดหมู่</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Object.entries(inventoryStats.categories)
-              .sort(([,a], [,b]) => b.count - a.count)
+              .sort(([, a], [, b]) => b.count - a.count)
               .map(([category, data]) => (
                 <div key={category} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
@@ -815,7 +828,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
               <p className="text-xs text-gray-500">ของคลัง</p>
             </div>
           </div>
-          
+
           <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
             <div>
               <p className="font-medium text-gray-900">สินค้าที่ทำสัญญา</p>
@@ -828,7 +841,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
               <p className="text-xs text-gray-500">ของคลัง</p>
             </div>
           </div>
-          
+
           <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
             <div>
               <p className="font-medium text-gray-900">สินค้าที่ขายไปแล้ว</p>
@@ -841,7 +854,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
               <p className="text-xs text-gray-500">ของสัญญา</p>
             </div>
           </div>
-          
+
           <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
             <div>
               <p className="font-medium text-gray-900">สัญญาทั้งหมด</p>
@@ -856,20 +869,20 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
       </div>
 
       {/* Add/Edit Product Form Section */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="mb-4 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
-              <div className="flex items-center gap-2 text-sm text-emerald-700">
-                <Building2 className="w-4 h-4" />
-                <span>สินค้าจะถูกเพิ่มในสาขา: <strong>{currentBranch?.name}</strong></span>
-              </div>
-            </div>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="mb-4 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+          <div className="flex items-center gap-2 text-sm text-emerald-700">
+            <Building2 className="w-4 h-4" />
+            <span>สินค้าจะถูกเพิ่มในสาขา: <strong>{currentBranch?.name}</strong></span>
+          </div>
+        </div>
         <h2 className="text-lg font-semibold text-gray-900 mb-4">
           {editingProduct ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่'}
         </h2>
         {editingProduct ? (
           <div className="space-y-4">
-            <ProductForm 
-              onAddProduct={updateProduct} 
+            <ProductForm
+              onAddProduct={updateProduct}
               submitting={submitting}
               contracts={contracts}
               initialData={{
@@ -895,8 +908,8 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
         ) : (
           <ProductForm onAddProduct={addProduct} submitting={submitting} contracts={contracts} />
         )}
-        </div>
-        
+      </div>
+
       {/* Search and Filter Bar */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
         <div className="flex items-center gap-4">
@@ -909,12 +922,12 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-            </div>
+          </div>
           <Button variant="outline" className="flex items-center gap-2">
             <Filter className="w-4 h-4" />
             กรอง
-                  </Button>
-                </div>
+          </Button>
+        </div>
       </div>
 
       {/* Products Table */}
@@ -943,14 +956,13 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
             <tbody className="bg-white divide-y divide-gray-200">
               {currentProducts.map((product) => (
                 <motion.tr
-                      key={product.id}
+                  key={product.id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className={`transition-colors ${
-                    product.isSoldItem 
-                      ? 'bg-blue-50 hover:bg-blue-100' 
-                      : 'hover:bg-gray-50'
-                  }`}
+                  className={`transition-colors ${product.isSoldItem
+                    ? 'bg-blue-50 hover:bg-blue-100'
+                    : 'hover:bg-gray-50'
+                    }`}
                 >
                   <td className="px-4 py-3 text-sm text-gray-900 font-medium">
                     {product.isSoldItem ? (
@@ -963,7 +975,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                     {product.isSoldItem ? (
                       <span className="text-blue-600 font-medium">
                         {product.receive_date ? new Date(product.receive_date).toLocaleDateString('th-TH') : '-'}
-                            </span>
+                      </span>
                     ) : (
                       product.receive_date ? new Date(product.receive_date).toLocaleDateString('th-TH') : '-'
                     )}
@@ -1003,7 +1015,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                           </div>
                         );
                       }
-                      
+
                       const contractInfo = contractDetails[product.id];
                       if (contractInfo) {
                         return (
@@ -1105,7 +1117,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                     ) : product.remarks ? (
                       <span className="text-gray-600">
                         {product.remarks}
-                            </span>
+                      </span>
                     ) : (
                       '-'
                     )}
@@ -1115,7 +1127,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                       // ตรวจสอบว่าสินค้านี้มีสัญญาหรือไม่
                       const contractInfo = contractDetails[product.id];
                       const hasContract = contractInfo || (product.contract_number && product.contract_number !== '-');
-                      
+
                       if (product.isSoldItem || hasContract) {
                         return (
                           <div className="text-center">
@@ -1135,15 +1147,15 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => deleteProduct(product.id)}
-                          className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => deleteProduct(product.id)}
+                              className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         );
                       }
                     })()}
@@ -1153,7 +1165,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
             </tbody>
           </table>
         </div>
-        
+
         {currentProducts.length === 0 && (
           <div className="text-center py-12">
             <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -1168,7 +1180,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-            <div className="text-sm text-gray-700">
+              <div className="text-sm text-gray-700">
                 แสดง {indexOfFirstItem + 1} ถึง {Math.min(indexOfLastItem, effectiveTotal)} จาก {effectiveTotal} รายการ
               </div>
               <div className="flex items-center gap-2 text-sm">
@@ -1192,7 +1204,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
               <Button variant="outline" size="sm" onClick={handlePrev} disabled={currentPage === 1} className="flex items-center gap-1">
                 <ChevronLeft className="w-4 h-4" /> Back
               </Button>
-              
+
               {/* Page list with ellipsis */}
               <div className="flex items-center gap-1">
                 {(() => {
@@ -1217,7 +1229,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                   return pages;
                 })()}
               </div>
-              
+
               {/* Next/Last */}
               <Button variant="outline" size="sm" onClick={handleNext} disabled={currentPage === totalPages} className="flex items-center gap-1">
                 Next <ChevronRight className="w-4 h-4" />
@@ -1236,7 +1248,7 @@ const ProductsPage = ({ selectedBranch, currentBranch }) => {
                   className="w-16 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
                 <Button variant="outline" size="sm" onClick={() => handlePageChange(parseInt(pageInput || '1'))}>Go</Button>
-                </div>
+              </div>
             </div>
           </div>
         </div>

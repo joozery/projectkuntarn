@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
-import { 
-  Users, 
+import {
+  Users,
   Download,
   Search,
   Filter,
@@ -22,13 +22,37 @@ import {
 } from 'lucide-react';
 import api from '@/lib/api';
 
-const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack, onViewPaymentSchedule }) => {
+import { useParams, useNavigate } from 'react-router-dom';
+
+const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker: propChecker, onBack, onViewPaymentSchedule, isStandalone }) => {
+  const { checkerId } = useParams();
+  const navigate = useNavigate();
+  const [checker, setChecker] = useState(propChecker);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showEntries, setShowEntries] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Update checker State
+  useEffect(() => {
+    if (propChecker) {
+      setChecker(propChecker);
+    } else if (isStandalone && checkerId) {
+      const fetchChecker = async () => {
+        try {
+          const response = await api.get(`/checkers/${checkerId}`);
+          if (response.data.success || response.data.data) {
+            setChecker(response.data.data || response.data);
+          }
+        } catch (error) {
+          console.error("Failed to load checker details", error);
+        }
+      };
+      fetchChecker();
+    }
+  }, [propChecker, isStandalone, checkerId]);
 
   // Load customers for this checker
   useEffect(() => {
@@ -37,23 +61,31 @@ const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack, 
     }
   }, [checker?.id, searchTerm, statusFilter]);
 
+  const handleBack = () => {
+    if (isStandalone) {
+      navigate('/checkers');
+    } else {
+      onBack();
+    }
+  };
+
   const loadCustomers = async () => {
     try {
       setLoading(true);
       const params = {};
-      
+
       if (searchTerm) {
         params.search = searchTerm;
       }
-      
+
       if (statusFilter && statusFilter !== 'all') {
         params.status = statusFilter;
       }
-      
+
       const response = await api.get(`/customers/checker/${checker.id}/contracts`, { params });
-      
+
       console.log('🔍 Checker customers API response:', response);
-      
+
       if (response.data?.success) {
         const customersData = response.data.data || [];
         console.log('🔍 Customers data:', customersData);
@@ -127,12 +159,12 @@ const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack, 
     console.log('🔍 viewPaymentSchedule called with customer:', customer);
     console.log('🔍 Customer ID:', customer.id);
     console.log('🔍 Customer full_name:', customer.full_name);
-    
+
     toast({
       title: "ดูตารางผ่อนของลูกค้า",
       description: `ดูตารางผ่อนของ ${customer.full_name}`,
     });
-    
+
     // TODO: Implement navigation to payment schedule page
     // Example: navigate(`/payment-schedule/${customer.id}`);
     // For now, show a modal or navigate to a new route
@@ -146,7 +178,7 @@ const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack, 
       completed: { label: 'ผ่อนเสร็จ', className: 'bg-blue-100 text-blue-800' },
       normal: { label: 'ปกติ', className: 'bg-gray-100 text-gray-800' }
     };
-    
+
     const config = statusConfig[status] || statusConfig.active;
     return (
       <span className={`px-2 py-1 text-xs rounded-full ${config.className}`}>
@@ -164,7 +196,7 @@ const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack, 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button
-              onClick={onBack}
+              onClick={handleBack}
               variant="outline"
               className="flex items-center gap-2"
             >
@@ -180,31 +212,31 @@ const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack, 
               </p>
             </div>
           </div>
-                      <div className="flex items-center gap-3">
-              <Button
-                onClick={loadCustomers}
-                variant="outline"
-                className="flex items-center gap-2"
-                disabled={loading}
-              >
-                <Loader2 className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                รีเฟรช
-              </Button>
-              <Button
-                onClick={handlePrint}
-                className="bg-purple-600 hover:bg-purple-700 text-white"
-              >
-                <Printer className="w-4 h-4 mr-2" />
-                พิมพ์รายงาน
-              </Button>
-              <Button
-                onClick={handleExport}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                ส่งออก
-              </Button>
-            </div>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={loadCustomers}
+              variant="outline"
+              className="flex items-center gap-2"
+              disabled={loading}
+            >
+              <Loader2 className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              รีเฟรช
+            </Button>
+            <Button
+              onClick={handlePrint}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              <Printer className="w-4 h-4 mr-2" />
+              พิมพ์รายงาน
+            </Button>
+            <Button
+              onClick={handleExport}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              ส่งออก
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -484,7 +516,7 @@ const CheckerCustomersPage = ({ selectedBranch, currentBranch, checker, onBack, 
             </tbody>
           </table>
         </div>
-        
+
         {/* Pagination */}
         <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
           <div className="flex-1 flex justify-between sm:hidden">

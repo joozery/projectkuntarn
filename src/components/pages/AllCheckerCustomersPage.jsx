@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
-import { 
-  Users, 
+import {
+  Users,
   Download,
   Search,
   Filter,
@@ -39,14 +39,14 @@ const AllCheckerCustomersPage = ({ selectedBranch, currentBranch, onViewPaymentS
       loadCheckers();
       loadAllCustomers();
     }
-  }, [selectedBranch, searchTerm, statusFilter, checkerFilter]);
+  }, [selectedBranch, statusFilter, checkerFilter]);
 
   const loadCheckers = async () => {
     try {
-      const response = await api.get(`/checkers`, { 
-        params: { branchId: selectedBranch } 
+      const response = await api.get(`/checkers`, {
+        params: { branchId: selectedBranch }
       });
-      
+
       if (response.data?.success) {
         setCheckers(response.data.data || []);
       } else {
@@ -61,44 +61,47 @@ const AllCheckerCustomersPage = ({ selectedBranch, currentBranch, onViewPaymentS
   const loadAllCustomers = async () => {
     try {
       setLoading(true);
-      
+
       // Get all checkers first
-      const checkersResponse = await api.get(`/checkers`, { 
-        params: { branchId: selectedBranch } 
+      const checkersResponse = await api.get(`/checkers`, {
+        params: { branchId: selectedBranch }
       });
-      
+
       if (checkersResponse.data?.success) {
         const allCheckers = checkersResponse.data.data || [];
-        let allCustomers = [];
-        
-        // Get customers for each checker
-        for (const checker of allCheckers) {
+
+        // Use Promise.all to fetch customers concurrently
+        const customerPromises = allCheckers.map(async (checker) => {
           try {
-            const params = {};
-            
+            const params = {
+              limit: 1000, // Fetch up to 1000 customers per checker to avoid pagination truncation
+              page: 1
+            };
+
             if (searchTerm) {
               params.search = searchTerm;
             }
-            
+
             if (statusFilter && statusFilter !== 'all') {
               params.status = statusFilter;
             }
-            
+
             const response = await api.get(`/customers/checker/${checker.id}/contracts`, { params });
-            
+
             if (response.data?.success) {
               const customersData = response.data.data || [];
-              
-              // Process each customer to separate contracts into individual rows
+              const processCustomers = [];
+
+              // Process each customer
               for (const customer of customersData) {
                 // Split contract numbers if they exist
-                const contractNumbers = customer.contract_numbers ? 
-                  customer.contract_numbers.split(', ').map(num => num.trim()) : 
+                const contractNumbers = customer.contract_numbers ?
+                  customer.contract_numbers.split(', ').map(num => num.trim()) :
                   [customer.code || 'ไม่ระบุ'];
-                
+
                 // Create separate row for each contract
                 for (const contractNumber of contractNumbers) {
-                  const customerWithContract = {
+                  processCustomers.push({
                     ...customer,
                     checker_name: checker.fullName,
                     checker_id: checker.id,
@@ -106,21 +109,32 @@ const AllCheckerCustomersPage = ({ selectedBranch, currentBranch, onViewPaymentS
                     contract_numbers: contractNumber, // For display
                     contract_count: 1, // Single contract per row
                     total_contracts_amount: customer.total_contracts_amount / contractNumbers.length // Divide amount equally
-                  };
-                  allCustomers.push(customerWithContract);
+                  });
                 }
               }
+              return processCustomers;
             }
           } catch (error) {
             console.error(`Error loading customers for checker ${checker.id}:`, error);
           }
-        }
-        
+          return [];
+        });
+
+        const results = await Promise.all(customerPromises);
+        let allCustomers = results.flat();
+
+        // Sort by contract number ascending
+        allCustomers.sort((a, b) => {
+          const valA = a.contract_number || a.code || '';
+          const valB = b.contract_number || b.code || '';
+          return valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' });
+        });
+
         // Filter by checker if specified
         if (checkerFilter && checkerFilter !== 'all') {
           allCustomers = allCustomers.filter(customer => customer.checker_id === parseInt(checkerFilter));
         }
-        
+
         console.log('🔍 All customers data:', allCustomers);
         setCustomers(allCustomers);
       } else {
@@ -174,20 +188,58 @@ const AllCheckerCustomersPage = ({ selectedBranch, currentBranch, onViewPaymentS
   };
 
   const filteredCustomers = customers.filter(customer => {
-    const matchesSearch = searchTerm === '' || 
-      customer.contract_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    if (searchTerm === '') return true;
+
+    const searchLower = searchTerm.toLowerCase();
+
+    // สร้างที่อยู่เต็มสำหรับผู้ซื้อ
+    const customerFullAddress = [
+      customer.address,
+      customer.moo ? `ม.${customer.moo}` : '',
+      customer.road,
+      customer.subdistrict ? `ต.${customer.subdistrict}` : '',
+      customer.district ? `อ.${customer.district}` : '',
+      customer.province ? `จ.${customer.province}` : ''
+    ].filter(Boolean).join(' ').toLowerCase();
+
+    // ที่อยู่คนค้ำประกัน
+    const guarantorAddress = (customer.guarantor_address || '').toLowerCase();
+
+    // รวบรวมเบอร์โทรผู้ซื้อ
+    const customerPhones = [
+      customer.phone1,
+      customer.phone2,
+      customer.phone3
+    ].filter(Boolean).join(' ');
+
+    const matchesSearch =
+      // ข้อมูลผู้ซื้อ
+      customer.contract_number?.toLowerCase().includes(searchLower) ||
+      customer.code?.toLowerCase().includes(searchLower) ||
+      customer.full_name?.toLowerCase().includes(searchLower) ||
       customer.id_card?.includes(searchTerm) ||
-      customer.nickname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.nickname?.toLowerCase().includes(searchLower) ||
+      customer.address?.toLowerCase().includes(searchLower) ||
+      customer.moo?.toLowerCase().includes(searchLower) ||
+      customer.road?.toLowerCase().includes(searchLower) ||
+      customer.subdistrict?.toLowerCase().includes(searchLower) ||
+      customer.district?.toLowerCase().includes(searchLower) ||
+      customer.province?.toLowerCase().includes(searchLower) ||
+      customerFullAddress.includes(searchLower) ||
       customer.phone1?.includes(searchTerm) ||
       customer.phone2?.includes(searchTerm) ||
       customer.phone3?.includes(searchTerm) ||
-      customer.primary_phone?.includes(searchTerm);
-    
+      customerPhones?.includes(searchTerm) ||
+      // ข้อมูลคนค้ำประกัน
+      customer.guarantor_name?.toLowerCase().includes(searchLower) ||
+      customer.guarantor_surname?.toLowerCase().includes(searchLower) ||
+      customer.guarantor_id_card?.includes(searchTerm) ||
+      customer.guarantor_nickname?.toLowerCase().includes(searchLower) ||
+      customer.guarantor_phone?.includes(searchTerm) ||
+      guarantorAddress.includes(searchLower);
+
     const matchesStatus = statusFilter === 'all' || customer.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   });
 
@@ -310,13 +362,13 @@ const AllCheckerCustomersPage = ({ selectedBranch, currentBranch, onViewPaymentS
             </label>
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                              <input
-                  type="text"
-                  placeholder="ค้นหาเลขที่สัญญา, ชื่อ, เลขบัตร, ชื่อเล่น, เบอร์โทร, ที่อยู่..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+              <input
+                type="text"
+                placeholder="ค้นหาเลขที่สัญญา, ชื่อผู้ซื้อ/คนค้ำ, เลขบัตร, ชื่อเล่น, เบอร์โทร, ที่อยู่..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
             </div>
           </div>
         </div>
@@ -328,42 +380,68 @@ const AllCheckerCustomersPage = ({ selectedBranch, currentBranch, onViewPaymentS
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th rowSpan="2" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
                   #
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th rowSpan="2" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
                   เลขที่สัญญา
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  ชื่อ-สกุล
+                <th colSpan="5" className="px-4 py-2 text-center text-xs font-medium text-gray-700 uppercase tracking-wider bg-blue-50 border-r">
+                  ข้อมูลผู้ซื้อ
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  เลขบัตรประชาชน
+                <th colSpan="5" className="px-4 py-2 text-center text-xs font-medium text-gray-700 uppercase tracking-wider bg-green-50 border-r">
+                  ข้อมูลคนค้ำประกัน
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  ชื่อเล่น
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th rowSpan="2" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
                   เช็คเกอร์
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  เบอร์โทร
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th rowSpan="2" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
                   สัญญา
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th rowSpan="2" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
                   สถานะ
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th rowSpan="2" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   ACTION
+                </th>
+              </tr>
+              <tr className="bg-gray-50">
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-t bg-blue-50">
+                  ชื่อ-สกุล
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-t bg-blue-50">
+                  เลขบัตร
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-t bg-blue-50">
+                  ชื่อเล่น
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-t bg-blue-50">
+                  ที่อยู่
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-t bg-blue-50">
+                  เบอร์โทร
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-t bg-green-50">
+                  ชื่อ-สกุล
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-t bg-green-50">
+                  เลขบัตร
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-t bg-green-50">
+                  ชื่อเล่น
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-t bg-green-50">
+                  ที่อยู่
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-t bg-green-50">
+                  เบอร์โทร
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan="10" className="px-6 py-12 text-center">
+                  <td colSpan="15" className="px-6 py-12 text-center">
                     <div className="flex items-center justify-center">
                       <Loader2 className="w-6 h-6 animate-spin mr-2" />
                       <span>กำลังโหลดข้อมูล...</span>
@@ -372,7 +450,7 @@ const AllCheckerCustomersPage = ({ selectedBranch, currentBranch, onViewPaymentS
                 </tr>
               ) : paginatedCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan="10" className="px-6 py-12 text-center">
+                  <td colSpan="15" className="px-6 py-12 text-center">
                     <div className="text-gray-500">
                       <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                       <p>ไม่พบข้อมูลลูกค้า</p>
@@ -380,93 +458,160 @@ const AllCheckerCustomersPage = ({ selectedBranch, currentBranch, onViewPaymentS
                   </td>
                 </tr>
               ) : (
-                paginatedCustomers.map((customer, index) => (
-                  <motion.tr
-                    key={customer.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="hover:bg-gray-50"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {(currentPage - 1) * showEntries + index + 1}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {customer.contract_number || customer.code || 'ไม่ระบุ'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-gray-400" />
-                        {customer.full_name}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {customer.id_card}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {customer.nickname && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {customer.nickname}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div className="flex items-center gap-2">
-                        <Shield className="w-4 h-4 text-gray-400" />
-                        {customer.checker_name || 'ไม่ระบุ'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {customer.primary_phone && (
+                paginatedCustomers.map((customer, index) => {
+                  // สร้างที่อยู่เต็มสำหรับผู้ซื้อ
+                  const customerFullAddress = [
+                    customer.address,
+                    customer.moo ? `ม.${customer.moo}` : '',
+                    customer.road,
+                    customer.subdistrict ? `ต.${customer.subdistrict}` : '',
+                    customer.district ? `อ.${customer.district}` : '',
+                    customer.province ? `จ.${customer.province}` : ''
+                  ].filter(Boolean).join(' ') || 'ไม่ระบุ';
+
+                  // รวบรวมเบอร์โทรผู้ซื้อ
+                  const customerPhones = [
+                    customer.phone1,
+                    customer.phone2,
+                    customer.phone3
+                  ].filter(Boolean).join(', ') || 'ไม่ระบุ';
+
+                  // ที่อยู่คนค้ำประกัน
+                  const guarantorAddress = customer.guarantor_address || 'ไม่ระบุ';
+
+                  // เบอร์โทรคนค้ำประกัน
+                  const guarantorPhone = customer.guarantor_phone || 'ไม่ระบุ';
+
+                  return (
+                    <motion.tr
+                      key={`${customer.id}-${customer.contract_number || index}`}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="hover:bg-gray-50"
+                    >
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 border-r">
+                        {(currentPage - 1) * showEntries + index + 1}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r">
+                        {customer.contract_number || customer.code || 'ไม่ระบุ'}
+                      </td>
+                      {/* ข้อมูลผู้ซื้อ */}
+                      <td className="px-4 py-4 text-sm text-gray-900 border-r bg-blue-50/30">
                         <div className="flex items-center gap-2">
-                          <Phone className="w-4 h-4 text-gray-400" />
-                          {customer.primary_phone}
+                          <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          <span className="font-medium">{customer.full_name || 'ไม่ระบุ'}</span>
                         </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-gray-400" />
-                        <span>1 ฿{customer.total_contracts_amount?.toLocaleString() || 0}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        customer.status === 'กำลังผ่อนชำระ' ? 'bg-green-100 text-green-800' :
-                        customer.status === 'ค้างชำระ' ? 'bg-red-100 text-red-800' :
-                        customer.status === 'ผ่อนเสร็จ' ? 'bg-blue-100 text-blue-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {customer.status || 'ไม่ระบุ'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          className="bg-blue-600 hover:bg-blue-700 text-white"
-                          onClick={() => viewPaymentSchedule(customer)}
-                        >
-                          <Eye className="w-3 h-3 mr-1" />
-                          ดูตารางผ่อน
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
-                          onClick={() => editCustomer(customer)}
-                        >
-                          <Edit className="w-3 h-3 mr-1" />
-                          แก้ไข
-                        </Button>
-                      </div>
-                    </td>
-                  </motion.tr>
-                ))
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 border-r bg-blue-50/30">
+                        {customer.id_card || 'ไม่ระบุ'}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 border-r bg-blue-50/30">
+                        {customer.nickname ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {customer.nickname}
+                          </span>
+                        ) : 'ไม่ระบุ'}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-900 border-r bg-blue-50/30 max-w-xs">
+                        <div className="flex items-start gap-1">
+                          <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                          <span className="text-xs leading-relaxed">{customerFullAddress}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-900 border-r bg-blue-50/30">
+                        {customerPhones !== 'ไม่ระบุ' ? (
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                            <span className="text-xs">{customerPhones}</span>
+                          </div>
+                        ) : 'ไม่ระบุ'}
+                      </td>
+                      {/* ข้อมูลคนค้ำประกัน */}
+                      <td className="px-4 py-4 text-sm text-gray-900 border-r bg-green-50/30">
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          <span className="font-medium">
+                            {customer.guarantor_name || customer.guarantor_surname
+                              ? `${customer.guarantor_name || ''} ${customer.guarantor_surname || ''}`.trim()
+                              : 'ไม่ระบุ'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 border-r bg-green-50/30">
+                        {customer.guarantor_id_card || 'ไม่ระบุ'}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 border-r bg-green-50/30">
+                        {customer.guarantor_nickname ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            {customer.guarantor_nickname}
+                          </span>
+                        ) : 'ไม่ระบุ'}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-900 border-r bg-green-50/30 max-w-xs">
+                        <div className="flex items-start gap-1">
+                          <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                          <span className="text-xs leading-relaxed">{guarantorAddress}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-900 border-r bg-green-50/30">
+                        {guarantorPhone !== 'ไม่ระบุ' ? (
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                            <span className="text-xs">{guarantorPhone}</span>
+                          </div>
+                        ) : 'ไม่ระบุ'}
+                      </td>
+                      {/* คอลัมน์อื่นๆ */}
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 border-r">
+                        <div className="flex items-center gap-2">
+                          <Shield className="w-4 h-4 text-gray-400" />
+                          {customer.checker_name || 'ไม่ระบุ'}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 border-r">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-gray-400" />
+                          <span>1 ฿{customer.total_contracts_amount?.toLocaleString() || 0}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 border-r">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${customer.status === 'กำลังผ่อนชำระ' ? 'bg-green-100 text-green-800' :
+                          customer.status === 'ค้างชำระ' ? 'bg-red-100 text-red-800' :
+                            customer.status === 'ผ่อนเสร็จ' ? 'bg-blue-100 text-blue-800' :
+                              'bg-gray-100 text-gray-800'
+                          }`}>
+                          {customer.status || 'ไม่ระบุ'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                            onClick={() => viewPaymentSchedule(customer)}
+                          >
+                            <Eye className="w-3 h-3 mr-1" />
+                            ดูตารางผ่อน
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                            onClick={() => editCustomer(customer)}
+                          >
+                            <Edit className="w-3 h-3 mr-1" />
+                            แก้ไข
+                          </Button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
-        
+
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="bg-white px-6 py-3 border-t border-gray-200 flex items-center justify-between">
@@ -507,7 +652,7 @@ const AllCheckerCustomersPage = ({ selectedBranch, currentBranch, onViewPaymentS
           </div>
         )}
       </div>
-    </div>
+    </div >
   );
 };
 

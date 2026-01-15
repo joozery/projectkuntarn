@@ -18,12 +18,12 @@ const ProductForm = ({ onAddProduct, submitting = false, initialData = null, con
   // Update form data when initialData changes (for edit mode)
   useEffect(() => {
     if (initialData) {
-      const costPrice = initialData.costPrice ? 
-        (typeof initialData.costPrice === 'string' ? 
-          initialData.costPrice : 
+      const costPrice = initialData.costPrice ?
+        (typeof initialData.costPrice === 'string' ?
+          initialData.costPrice :
           parseFloat(initialData.costPrice).toLocaleString()
         ) : '';
-      
+
       setFormData({
         productCode: initialData.productCode || '',
         productName: initialData.productName || '',
@@ -40,7 +40,7 @@ const ProductForm = ({ onAddProduct, submitting = false, initialData = null, con
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     if (!formData.productName || !formData.costPrice) {
       toast({
         title: "กรุณากรอกข้อมูลให้ครบถ้วน",
@@ -51,10 +51,10 @@ const ProductForm = ({ onAddProduct, submitting = false, initialData = null, con
     }
 
     const costPrice = parseFloat(formData.costPrice.replace(/,/g, ''));
-    if (isNaN(costPrice) || costPrice <= 0) {
+    if (isNaN(costPrice) || costPrice < 0) {
       toast({
         title: "ราคาไม่ถูกต้อง",
-        description: "กรุณาใส่ราคาที่เป็นตัวเลขและมากกว่า 0",
+        description: "กรุณาใส่ราคาที่เป็นตัวเลขและมากกว่าหรือเท่ากับ 0",
         variant: "destructive"
       });
       return;
@@ -88,7 +88,7 @@ const ProductForm = ({ onAddProduct, submitting = false, initialData = null, con
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
+
     // Format cost price with commas
     if (name === 'costPrice') {
       const numericValue = value.replace(/[^\d]/g, '');

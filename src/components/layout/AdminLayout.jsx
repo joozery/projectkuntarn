@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdminSidebar from '@/components/layout/AdminSidebar';
 import AdminHeader from '@/components/layout/AdminHeader';
 import AdminContent from '@/components/layout/AdminContent';
 
-const AdminLayout = ({ 
+const AdminLayout = ({
   branches,
   setBranches,
   selectedBranch,
@@ -12,20 +13,39 @@ const AdminLayout = ({
   currentUser,
   onLogout
 }) => {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const location = useLocation();
+  const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [customerData, setCustomerData] = useState(null);
 
   const currentBranch = branches.find(branch => branch.id === selectedBranch) || branches[0];
 
+  // Get active tab from URL path
+  const getActiveTabFromPath = (pathname) => {
+    if (pathname.includes('/checkers/') && pathname.includes('/customers')) {
+      return 'checker-customers';
+    }
+    if (pathname.includes('/checkers/') && pathname.includes('/report')) {
+      return 'checker-report';
+    }
+    const path = pathname.split('/').filter(Boolean)[0] || 'dashboard';
+    return path;
+  };
+
+  const activeTab = getActiveTabFromPath(location.pathname);
+
+  const handleTabChange = (tab) => {
+    navigate(`/${tab}`);
+  };
+
   const handleBack = () => {
-    setActiveTab('checkers');
+    navigate('/checkers');
     setCustomerData(null);
   };
 
   const handleViewPaymentSchedule = (customer) => {
     setCustomerData(customer);
-    setActiveTab('payment-schedule');
+    navigate('/payment-schedule');
   };
 
   // Note: Data filtering is now handled by individual pages using API calls
@@ -33,18 +53,17 @@ const AdminLayout = ({
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <AdminSidebar 
+      <AdminSidebar
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabChange}
         collapsed={sidebarCollapsed}
         setCollapsed={setSidebarCollapsed}
         currentBranch={currentBranch}
       />
-      
-      <div className={`flex-1 flex flex-col transition-all duration-300 ${
-        sidebarCollapsed ? 'ml-16' : 'ml-64'
-      }`}>
-        <AdminHeader 
+
+      <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-64'
+        }`}>
+        <AdminHeader
           sidebarCollapsed={sidebarCollapsed}
           setSidebarCollapsed={setSidebarCollapsed}
           branches={branches}
@@ -54,8 +73,8 @@ const AdminLayout = ({
           currentUser={currentUser}
           onLogout={onLogout}
         />
-        
-        <AdminContent 
+
+        <AdminContent
           activeTab={activeTab}
           selectedBranch={selectedBranch}
           currentBranch={currentBranch}

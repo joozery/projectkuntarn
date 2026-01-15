@@ -1,4 +1,5 @@
 import React from 'react';
+import { useParams } from 'react-router-dom';
 import Dashboard from '@/components/Dashboard';
 import ProductsPage from '@/components/pages/ProductsPage';
 import CustomersPage from '@/components/pages/CustomersPage';
@@ -6,6 +7,7 @@ import EmployeesPage from '@/components/pages/EmployeesPage';
 import CollectorsPage from '@/components/pages/CollectorsPage';
 import CheckersPage from '@/components/pages/CheckersPage';
 import CheckerInstallmentReport from '@/components/pages/CheckerInstallmentReport';
+import CheckerCustomersPage from '@/components/pages/CheckerCustomersPage';
 import AllCheckerCustomersPage from '@/components/pages/AllCheckerCustomersPage';
 import SalesIndexPage from '@/components/pages/SalesIndexPage';
 import PaymentSchedulePage from '@/components/pages/PaymentSchedulePage';
@@ -21,8 +23,8 @@ import AnalyticsPage from '@/components/pages/AnalyticsPage';
 import BranchesPage from '@/components/pages/BranchesPage';
 import SettingsPage from '@/components/pages/SettingsPage';
 
-const AdminContent = ({ 
-  activeTab, 
+const AdminContent = ({
+  activeTab,
   selectedBranch,
   currentBranch,
   customerData,
@@ -35,50 +37,68 @@ const AdminContent = ({
     switch (activeTab) {
       case 'dashboard':
         return (
-          <Dashboard 
+          <Dashboard
             selectedBranch={selectedBranch}
             currentBranch={currentBranch}
           />
         );
       case 'products':
         return (
-          <ProductsPage 
+          <ProductsPage
             selectedBranch={selectedBranch}
             currentBranch={currentBranch}
           />
         );
       case 'customers':
         return (
-          <CustomersPage 
+          <CustomersPage
             selectedBranch={selectedBranch}
             currentBranch={currentBranch}
           />
         );
       case 'employees':
         return (
-          <EmployeesPage 
+          <EmployeesPage
             selectedBranch={selectedBranch}
             currentBranch={currentBranch}
           />
         );
       case 'salespeople':
         return (
-          <CollectorsPage 
+          <CollectorsPage
             selectedBranch={selectedBranch}
             currentBranch={currentBranch}
           />
         );
       case 'checkers':
         return (
-          <CheckersPage 
+          <CheckersPage
             selectedBranch={selectedBranch}
             currentBranch={currentBranch}
             onViewPaymentSchedule={onViewPaymentSchedule}
           />
         );
+      case 'checker-customers':
+        return (
+          <CheckerCustomersPage
+            selectedBranch={selectedBranch}
+            currentBranch={currentBranch}
+            onViewPaymentSchedule={onViewPaymentSchedule}
+            isStandalone={true}
+          />
+        );
+      case 'checker-report':
+        return (
+          <CheckerInstallmentReport
+            selectedBranch={selectedBranch}
+            currentBranch={currentBranch}
+            onBack={onBack}
+            isStandalone={true}
+          />
+        );
       case 'all-checker-customers':
         return (
-          <AllCheckerCustomersPage 
+          <AllCheckerCustomersPage
             selectedBranch={selectedBranch}
             currentBranch={currentBranch}
             onViewPaymentSchedule={onViewPaymentSchedule}
@@ -86,7 +106,7 @@ const AdminContent = ({
         );
       case 'checker-installment-report':
         return (
-          <CheckerInstallmentReport 
+          <CheckerInstallmentReport
             selectedBranch={selectedBranch}
             currentBranch={currentBranch}
             onBack={onBack}
@@ -94,14 +114,14 @@ const AdminContent = ({
         );
       case 'sales-index':
         return (
-          <SalesIndexPage 
+          <SalesIndexPage
             selectedBranch={selectedBranch}
             currentBranch={currentBranch}
           />
         );
       case 'payment-schedule':
         return (
-          <PaymentSchedulePage 
+          <PaymentSchedulePage
             selectedBranch={selectedBranch}
             currentBranch={currentBranch}
             customerData={customerData}
@@ -112,54 +132,54 @@ const AdminContent = ({
 
       case 'contracts':
         return (
-          <ContractsPage 
+          <ContractsPage
             selectedBranch={selectedBranch}
             currentBranch={currentBranch}
           />
         );
       case 'payments':
         return (
-          <InstallmentIndexPage 
+          <InstallmentIndexPage
             selectedBranch={selectedBranch}
             currentBranch={currentBranch}
           />
         );
       case 'returns':
         return (
-          <ReturnsPage 
+          <ReturnsPage
             selectedBranch={selectedBranch}
             currentBranch={currentBranch}
           />
         );
       case 'reports':
         return (
-          <ReportsPage 
+          <ReportsPage
             selectedBranch={selectedBranch}
             currentBranch={currentBranch}
           />
         );
       case 'analytics':
         return (
-          <AnalyticsPage 
+          <AnalyticsPage
             selectedBranch={selectedBranch}
             currentBranch={currentBranch}
           />
         );
       case 'branches':
         return (
-          <BranchesPage 
+          <BranchesPage
             selectedBranch={selectedBranch}
           />
         );
       case 'import-data':
         return (
-          <ImportDataPage 
+          <ImportDataPage
             onBack={() => window.history.back()}
           />
         );
       case 'admin-users':
         return (
-          <AdminUsersPage 
+          <AdminUsersPage
             selectedBranch={selectedBranch}
             currentBranch={currentBranch}
           />
@@ -168,7 +188,7 @@ const AdminContent = ({
         return <SettingsPage />;
       default:
         return (
-          <Dashboard 
+          <Dashboard
             selectedBranch={selectedBranch}
             currentBranch={currentBranch}
           />
